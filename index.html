@@ -551,7 +551,16 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
     const dayOfWeek = isNaN(dateObj) ? 0 : dateObj.getDay();
     const month = isNaN(dateObj) ? '' : dateStr.substring(0, 7);
     const cardId = (obj['Card ID'] || '').trim();
-    const payType = cardId.toLowerCase().startsWith('card_') ? 'in-store' : 'online';
+    const pmdType = (obj['Payment Method Type'] || '').trim().toLowerCase();
+    const csvPayType = (obj['Payment Type'] || '').trim().toLowerCase();
+    // Use explicit Payment Type column if present (new CSVs)
+    // Fall back to pmd_type check, then card_ prefix for old CSVs
+    const inStoreTypes = ['card_present', 'bancontact', 'interac_present'];
+    const payType = csvPayType === 'in-store' ? 'in-store'
+      : csvPayType === 'online' ? 'online'
+      : inStoreTypes.includes(pmdType) ? 'in-store'
+      : cardId.toLowerCase().startsWith('card_') ? 'in-store'
+      : 'online';
     const piId = (obj['payment_intent_id'] || '').trim();
 
     // Calculate week from actual transaction date so W18 filter shows only W18 transactions
