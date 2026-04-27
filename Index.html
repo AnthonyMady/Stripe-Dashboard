@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WoodCutter — Stripe Analytics</title>
+<script src="https://apis.google.com/js/api.js"></script>
+<script src="https://accounts.google.com/gsi/client"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --bg: #080809;
+  --s1: #0f0f11;
+  --s2: #141417;
+  --s3: #1a1a1f;
+  --b1: rgba(255,255,255,0.05);
+  --b2: rgba(255,255,255,0.09);
+  --b3: rgba(255,255,255,0.15);
+  --text: #f0f0f0;
+  --muted: #555;
+  --muted2: #888;
+  --muted3: #aaa;
+  --gold: #c8a96e;
+  --gold2: #e8c98e;
+  --gold-dim: rgba(200,169,110,0.12);
+  --red: #c4504f;
+  --red-dim: rgba(196,80,79,0.1);
+  --green: #4a9e6e;
+  --green-dim: rgba(74,158,110,0.1);
+  --blue: #4a7fc4;
+  --blue-dim: rgba(74,127,196,0.1);
+  --orange: #c47a4a;
+  --purple: #8a6ec4;
+  --r: 8px;
+  --r-lg: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Bricolage Grotesque', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; -webkit-font-smoothing: antialiased; }
+
+/* ── AUTH ── */
+#auth-screen {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; gap: 28px; padding: 40px; position: relative; overflow: hidden;
+}
+#auth-screen::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(200,169,110,0.07) 0%, transparent 65%);
+  pointer-events: none;
+}
+#auth-screen::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--b2), transparent);
+}
+.auth-eyebrow { font-size: 10px; letter-spacing: 0.25em; color: var(--muted2); text-transform: uppercase; font-weight: 500; font-family: 'JetBrains Mono', monospace; }
+.auth-logo { display: flex; align-items: center; gap: 12px; }
+.auth-logo-mark {
+  width: 42px; height: 42px; border: 1px solid var(--b3); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.auth-logo-mark svg { width: 20px; height: 20px; }
+.auth-wordmark { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; }
+.auth-title { font-size: 13px; color: var(--muted2); font-family: 'JetBrains Mono', monospace; text-align: center; max-width: 320px; line-height: 1.8; }
+.auth-title span { color: var(--gold); }
+.auth-btn {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--gold); color: #0a0a0b;
+  border: none; border-radius: var(--r); padding: 13px 28px;
+  font-family: 'Bricolage Grotesque', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s; letter-spacing: 0.02em;
+}
+.auth-btn:hover { background: var(--gold2); transform: translateY(-1px); }
+.auth-btn svg { width: 16px; height: 16px; }
+.auth-footnote { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+#auth-error { color: var(--red); font-size: 11px; display: none; font-family: 'JetBrains Mono', monospace; }
+
+/* ── LOADING ── */
+#loading-screen {
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; gap: 16px;
+}
+.spinner { width: 24px; height: 24px; border: 1.5px solid var(--b2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.06em; }
+
+/* ── DASHBOARD ── */
+#dashboard { display: none; min-height: 100vh; }
+
+/* ── HEADER ── */
+header {
+  border-bottom: 1px solid var(--b1); padding: 0 28px; height: 52px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; background: rgba(8,8,9,0.94);
+  backdrop-filter: blur(16px); z-index: 100;
+}
+.hdr-left { display: flex; align-items: center; gap: 14px; }
+.hdr-mark { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+.hdr-title { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.hdr-divider { width: 1px; height: 14px; background: var(--b2); }
+.hdr-ctx { font-size: 11px; color: var(--muted2); font-family: 'JetBrains Mono', monospace; }
+.hdr-right { display: flex; align-items: center; gap: 10px; }
+.hdr-week { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.hdr-btn {
+  background: transparent; border: 1px solid var(--b2); color: var(--muted2);
+  border-radius: 6px; padding: 5px 12px; font-size: 10px;
+  font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.15s;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.hdr-btn:hover { border-color: var(--b3); color: var(--text); }
+
+/* ── FILTERS ── */
+.filters {
+  padding: 10px 28px; display: flex; gap: 6px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--b1); background: var(--s1); align-items: center;
+}
+.filters select, .filters input {
+  background: var(--s2); border: 1px solid var(--b1); color: var(--text);
+  border-radius: 6px; padding: 6px 10px; font-size: 11px;
+  font-family: 'JetBrains Mono', monospace; outline: none;
+  transition: border-color 0.15s; -webkit-appearance: none; cursor: pointer;
+}
+.filters select:focus, .filters input:focus { border-color: rgba(200,169,110,0.4); }
+.filters select option { background: var(--s2); }
+.filters input::placeholder { color: var(--muted); }
+.filter-label { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; margin-left: 6px; }
+.filter-sep { width: 1px; height: 16px; background: var(--b2); margin: 0 4px; }
+
+/* ── MAIN ── */
+main { padding: 20px 28px; max-width: 1440px; margin: 0 auto; }
+
+/* ── KPI ROW ── */
+.kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 8px; }
+.kpi {
+  background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r);
+  padding: 16px 18px; position: relative; overflow: hidden; cursor: default;
+  transition: border-color 0.2s;
+}
+.kpi:hover { border-color: var(--b2); }
+.kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--b2), transparent); }
+.kpi-label { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+.kpi-val { font-size: 22px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; }
+.kpi-sub { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 5px; }
+.kpi-delta { font-size: 10px; font-family: 'JetBrains Mono', monospace; margin-top: 4px; }
+.up { color: var(--green); }
+.down { color: var(--red); }
+.neutral { color: var(--muted); }
+.accent-gold { color: var(--gold); }
+.accent-red { color: var(--red); }
+.accent-green { color: var(--green); }
+.accent-blue { color: var(--blue); }
+.accent-purple { color: var(--purple); }
+
+/* ── CITY STRIPS ── */
+.city-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 16px; }
+.city-card {
+  background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r);
+  padding: 12px 14px; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden;
+}
+.city-card:hover { border-color: var(--b2); background: var(--s2); }
+.city-card.active { border-color: rgba(200,169,110,0.4); background: var(--s2); }
+.city-card.active::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--gold); }
+.city-name { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; margin-bottom: 6px; }
+.city-revenue { font-size: 14px; font-weight: 700; letter-spacing: -0.03em; font-family: 'JetBrains Mono', monospace; color: var(--gold); }
+.city-meta { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 3px; }
+.city-tip-bar { margin-top: 6px; height: 2px; background: var(--b1); border-radius: 1px; overflow: hidden; }
+.city-tip-fill { height: 100%; background: var(--gold); border-radius: 1px; transition: width 0.4s; }
+
+/* ── CHART GRID ── */
+.chart-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.chart-card {
+  background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r);
+  padding: 18px 20px;
+}
+.chart-title { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+.chart-title-badge { font-size: 9px; color: var(--gold); background: var(--gold-dim); border: 1px solid rgba(200,169,110,0.2); border-radius: 4px; padding: 2px 6px; }
+
+/* ── HEATMAP ── */
+.heatmap-grid { display: grid; grid-template-columns: 36px repeat(7, 1fr); gap: 3px; }
+.heatmap-header { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; text-align: center; padding: 2px 0; }
+.heatmap-label { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; text-align: right; padding: 2px 4px 2px 0; line-height: 20px; }
+.heatmap-cell {
+  height: 20px; border-radius: 3px; background: var(--s2);
+  position: relative; cursor: default; transition: opacity 0.15s;
+}
+.heatmap-cell:hover { opacity: 0.8; }
+.heatmap-legend { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.heatmap-legend-bar { display: flex; gap: 2px; }
+.heatmap-legend-stop { width: 16px; height: 8px; border-radius: 1px; }
+
+/* ── TABLE ── */
+.table-card { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r); overflow: hidden; }
+.table-hdr { padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--b1); }
+.table-hdr-title { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; }
+.table-hdr-count { font-size: 11px; color: var(--muted2); font-family: 'JetBrains Mono', monospace; }
+.table-wrap { overflow-x: auto; max-height: 420px; overflow-y: auto; }
+table { width: 100%; border-collapse: collapse; }
+th {
+  position: sticky; top: 0; z-index: 2;
+  padding: 8px 12px; font-size: 9px; font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+  border-bottom: 1px solid var(--b1); background: var(--s2);
+  white-space: nowrap; cursor: pointer; user-select: none; text-align: left;
+}
+th:hover { color: var(--muted3); }
+td { padding: 8px 12px; border-bottom: 1px solid var(--b1); font-size: 12px; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.012); }
+.mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.table-foot { padding: 8px 18px; font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; border-top: 1px solid var(--b1); background: var(--s2); display: flex; justify-content: space-between; }
+
+/* ── BADGES ── */
+.badge {
+  display: inline-flex; align-items: center; font-size: 9px;
+  font-family: 'JetBrains Mono', monospace; padding: 2px 7px;
+  border-radius: 4px; font-weight: 500; letter-spacing: 0.04em; white-space: nowrap;
+}
+.b-success { background: var(--green-dim); color: #6dcc96; border: 1px solid rgba(74,158,110,0.2); }
+.b-fail { background: var(--red-dim); color: #e07070; border: 1px solid rgba(196,80,79,0.2); }
+.b-pending { background: rgba(200,169,110,0.1); color: var(--gold); border: 1px solid rgba(200,169,110,0.2); }
+.b-terminal { background: var(--blue-dim); color: #7aabdb; border: 1px solid rgba(74,127,196,0.2); }
+.b-online { background: rgba(138,110,196,0.1); color: #b09ee0; border: 1px solid rgba(138,110,196,0.2); }
+.tip-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--gold); }
+.tip-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); }
+
+/* ── DONUT LEGEND ── */
+.donut-wrap { display: flex; align-items: center; gap: 20px; }
+.donut-canvas-wrap { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
+.donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.donut-center-val { font-size: 18px; font-weight: 700; letter-spacing: -0.04em; }
+.donut-center-lbl { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.donut-legend { display: flex; flex-direction: column; gap: 7px; flex: 1; }
+.donut-item { display: flex; align-items: center; gap: 7px; font-size: 11px; }
+.donut-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.donut-name { color: var(--muted3); flex: 1; font-size: 10px; }
+.donut-pct { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted2); }
+.donut-amt { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-screen">
+  <div class="auth-eyebrow">Analytics Platform</div>
+  <div class="auth-logo">
+    <div class="auth-logo-mark">
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 16L7 8L10 13L13 6L17 16" stroke="#c8a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="auth-wordmark">WoodCutter</div>
+  </div>
+  <div class="auth-title">
+    Revenue intelligence across<br>all <span>7 locations</span> — real-time.
+  </div>
+  <button class="auth-btn" onclick="signIn()">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+    Sign in with Google
+  </button>
+  <div class="auth-footnote">Read-only access to Google Drive</div>
+  <div id="auth-error"></div>
+</div>
+
+<!-- LOADING -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Connecting…</div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <header>
+    <div class="hdr-left">
+      <div class="hdr-mark"></div>
+      <div class="hdr-title">WoodCutter</div>
+      <div class="hdr-divider"></div>
+      <div class="hdr-ctx" id="hdr-ctx">Loading…</div>
+    </div>
+    <div class="hdr-right">
+      <div class="hdr-week" id="hdr-week"></div>
+      <button class="hdr-btn" onclick="loadData()">↻ Refresh</button>
+    </div>
+  </header>
+
+  <div class="filters">
+    <span class="filter-label">Filter</span>
+    <select id="f-city" onchange="applyFilters()"><option value="">All cities</option></select>
+    <select id="f-week" onchange="applyFilters()"><option value="">All weeks</option></select>
+    <select id="f-month" onchange="applyFilters()"><option value="">All months</option></select>
+    <div class="filter-sep"></div>
+    <select id="f-status" onchange="applyFilters()">
+      <option value="">All statuses</option>
+      <option value="succeeded">Succeeded</option>
+      <option value="canceled">Canceled</option>
+    </select>
+    <select id="f-type" onchange="applyFilters()">
+      <option value="">All types</option>
+      <option value="terminal">Terminal</option>
+      <option value="online">Online</option>
+    </select>
+    <select id="f-tip" onchange="applyFilters()">
+      <option value="">All transactions</option>
+      <option value="yes">With tip</option>
+      <option value="no">No tip</option>
+    </select>
+  </div>
+
+  <main>
+    <!-- KPI ROW -->
+    <div class="kpi-row" id="kpi-row"></div>
+
+    <!-- CITY STRIPS -->
+    <div class="city-row" id="city-row"></div>
+
+    <!-- CHARTS ROW 1 -->
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">
+          Revenue over time
+          <span class="chart-title-badge" id="trend-badge">weekly</span>
+        </div>
+        <div style="position:relative;height:180px"><canvas id="chart-trend" role="img" aria-label="Revenue trend over time">Revenue trend chart</canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Payment type</div>
+        <div class="donut-wrap">
+          <div class="donut-canvas-wrap">
+            <canvas id="chart-type" role="img" aria-label="Payment type breakdown">Payment type donut chart</canvas>
+            <div class="donut-center">
+              <div class="donut-center-val" id="type-center-val">—</div>
+              <div class="donut-center-lbl">total</div>
+            </div>
+          </div>
+          <div class="donut-legend" id="type-legend"></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Tip distribution</div>
+        <div class="donut-wrap">
+          <div class="donut-canvas-wrap">
+            <canvas id="chart-tip" role="img" aria-label="Tip distribution">Tip donut chart</canvas>
+            <div class="donut-center">
+              <div class="donut-center-val accent-gold" id="tip-center-val">—</div>
+              <div class="donut-center-lbl">tip rate</div>
+            </div>
+          </div>
+          <div class="donut-legend" id="tip-legend"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHARTS ROW 2 -->
+    <div class="chart-grid-2">
+      <div class="chart-card">
+        <div class="chart-title">Revenue by city</div>
+        <div style="position:relative;height:180px"><canvas id="chart-city" role="img" aria-label="Revenue by city bar chart">Revenue by city</canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">
+          Transaction heatmap
+          <span style="font-size:9px;color:var(--muted)">amount by day × hour</span>
+        </div>
+        <div class="heatmap-grid" id="heatmap"></div>
+        <div class="heatmap-legend">
+          <span>Low</span>
+          <div class="heatmap-legend-bar" id="heatmap-legend"></div>
+          <span>High</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-card">
+      <div class="table-hdr">
+        <div class="table-hdr-title">Transactions</div>
+        <div class="table-hdr-count" id="table-count"></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th onclick="sortBy('date')">Date</th>
+            <th onclick="sortBy('city')">City</th>
+            <th onclick="sortBy('amount')">Amount</th>
+            <th onclick="sortBy('tip_amount')">Tip</th>
+            <th onclick="sortBy('total_amount')">Total</th>
+            <th>Status</th>
+            <th>Type</th>
+            <th onclick="sortBy('currency')">Currency</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="table-foot">
+        <span id="tfoot-left"></span>
+        <span id="tfoot-right"></span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const CLIENT_ID = '1022326121984-6kvtq4tld6i3gtqq109oo83dj066o70b.apps.googleusercontent.com';
+const FOLDER_ID = '1DCLUZyFw0xJ4KKTIi-AiIxXWBqZ0-bBw';
+const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
+
+let tokenClient, accessToken;
+let RAW = [], filtered = [];
+let sortCol = 'date', sortAsc = false;
+let charts = {};
+let activeCity = '';
+
+// ── AUTH ──────────────────────────────────────────────
+function signIn() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID, scope: SCOPES,
+    callback: async (resp) => {
+      if (resp.error) { showErr(resp.error); return; }
+      accessToken = resp.access_token;
+      await loadData();
+    }
+  });
+  tokenClient.requestAccessToken();
+}
+function showErr(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = 'Error: ' + msg; el.style.display = 'block';
+}
+
+// ── LOAD DATA ────────────────────────────────────────
+async function loadData() {
+  show('loading-screen'); setLoading('Scanning Drive folder…');
+  try {
+    const csvRes = await driveApi(`files?q='${FOLDER_ID}' in parents and name contains 'stripe_' and trashed=false&fields=files(id,name,modifiedTime)&orderBy=name desc&supportsAllDrives=true&includeItemsFromAllDrives=true`);
+    if (!csvRes.files || !csvRes.files.length) throw new Error('No Stripe CSV files found in folder');
+
+    setLoading(`Loading ${csvRes.files.length} file(s)…`);
+    RAW = [];
+    let loaded = 0;
+    for (const file of csvRes.files) {
+      setLoading(`Parsing ${file.name}…`);
+      const content = await driveDownload(file.id);
+      const rows = parseCSV(content, file.name);
+      RAW = RAW.concat(rows);
+      loaded++;
+    }
+
+    const weeks = [...new Set(RAW.map(r => r.week))].sort();
+    const latestWeek = weeks[weeks.length - 1];
+    document.getElementById('hdr-ctx').textContent = `${RAW.length.toLocaleString()} transactions · ${csvRes.files.length} files`;
+    document.getElementById('hdr-week').textContent = `W${latestWeek} · ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+
+    populateFilters();
+    show('dashboard');
+    applyFilters();
+  } catch (e) {
+    show('dashboard');
+    document.querySelector('main').innerHTML = `<div style="background:var(--red-dim);border:1px solid rgba(196,80,79,0.25);border-radius:var(--r);padding:16px 20px;color:#e07070;font-size:12px;margin:32px 0;font-family:'JetBrains Mono',monospace">⚠ ${e.message}</div>`;
+  }
+}
+
+// ── DRIVE ─────────────────────────────────────────────
+async function driveApi(path) {
+  const res = await fetch(`https://www.googleapis.com/drive/v3/${path}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+  return res.json();
+}
+async function driveDownload(fileId) {
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: `Bearer ${accessToken}` } });
+  return res.text();
+}
+
+// ── CSV PARSER ────────────────────────────────────────
+function parseCSV(content, filename) {
+  const lines = content.trim().split('\n');
+  if (lines.length < 2) return [];
+  const delim = lines[0].includes(';') ? ';' : ',';
+  const headers = parseLine(lines[0], delim).map(h => h.trim());
+  const rows = [];
+
+  // Extract city and week from filename: stripe_W18_April2026_Brussels.csv
+  const cityMatch = filename.match(/stripe_W\d+_\w+_(\w+)\.csv/i);
+  const weekMatch = filename.match(/stripe_W(\d+)/i);
+  const city = cityMatch ? cityMatch[1] : 'Unknown';
+  const week = weekMatch ? parseInt(weekMatch[1]) : 0;
+
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseLine(lines[i], delim);
+    if (vals.length < 3) continue;
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h] = (vals[idx] || '').trim(); });
+
+    const amount = parseFloat(obj['Amount'] || obj['base_amount']) || 0;
+    const tip = parseFloat(obj['tip_amount']) || 0;
+    const total = parseFloat(obj['total_amount'] || obj['Amount']) || (amount + tip);
+    const status = (obj['Status'] || obj['status'] || '').toLowerCase();
+    const dateStr = obj['Created date (UTC)'] || obj['date'] || '';
+    const dateObj = new Date(dateStr);
+    const hour = isNaN(dateObj) ? 12 : dateObj.getHours();
+    const dayOfWeek = isNaN(dateObj) ? 0 : dateObj.getDay();
+    const month = isNaN(dateObj) ? '' : dateStr.substring(0, 7);
+    const typeVal = obj['type (metadata)'] || obj['Type'] || '';
+    const payType = typeVal.toLowerCase().includes('terminal') || typeVal === '' && obj['Card ID'] ? 'terminal' : 'online';
+
+    rows.push({
+      id: obj['id'] || obj['Id'] || '',
+      date: dateStr,
+      dateObj: dateObj,
+      hour: hour,
+      dayOfWeek: dayOfWeek,
+      month: month,
+      week: week,
+      city: city,
+      amount: amount,
+      tip_amount: tip,
+      total_amount: total,
+      currency: (obj['Currency'] || obj['currency'] || 'EUR').toUpperCase(),
+      status: status,
+      type: payType,
+      description: obj['Description'] || '',
+      customer_email: obj['Customer Email'] || '',
+      statement: obj['Statement Descriptor'] || '',
+    });
+  }
+  return rows;
+}
+
+function parseLine(line, delim) {
+  const result = []; let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; continue; }
+    if (c === delim && !inQ) { result.push(cur); cur = ''; continue; }
+    cur += c;
+  }
+  result.push(cur); return result;
+}
+
+// ── FILTERS ───────────────────────────────────────────
+function populateFilters() {
+  const cities = [...new Set(RAW.map(r => r.city))].sort();
+  const weeks = [...new Set(RAW.map(r => r.week))].filter(Boolean).sort((a,b) => b-a);
+  const months = [...new Set(RAW.map(r => r.month))].filter(Boolean).sort().reverse();
+
+  const fCity = document.getElementById('f-city');
+  fCity.innerHTML = '<option value="">All cities</option>';
+  cities.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; fCity.appendChild(o); });
+
+  const fWeek = document.getElementById('f-week');
+  fWeek.innerHTML = '<option value="">All weeks</option>';
+  weeks.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = 'Week ' + w; fWeek.appendChild(o); });
+
+  const fMonth = document.getElementById('f-month');
+  fMonth.innerHTML = '<option value="">All months</option>';
+  months.forEach(m => {
+    const o = document.createElement('option'); o.value = m;
+    o.textContent = new Date(m + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    fMonth.appendChild(o);
+  });
+}
+
+function applyFilters() {
+  const city = document.getElementById('f-city').value;
+  const week = document.getElementById('f-week').value;
+  const month = document.getElementById('f-month').value;
+  const status = document.getElementById('f-status').value;
+  const type = document.getElementById('f-type').value;
+  const tip = document.getElementById('f-tip').value;
+
+  filtered = RAW.filter(r =>
+    (!city || r.city === city) &&
+    (!week || r.week == week) &&
+    (!month || r.month === month) &&
+    (!status || r.status === status) &&
+    (!type || r.type === type) &&
+    (!tip || (tip === 'yes' ? r.tip_amount > 0 : r.tip_amount === 0))
+  );
+  renderAll();
+}
+
+// ── SORT ──────────────────────────────────────────────
+function sortBy(col) {
+  sortAsc = sortCol === col ? !sortAsc : false;
+  sortCol = col; renderAll();
+}
+
+// ── RENDER ────────────────────────────────────────────
+function renderAll() {
+  const succeeded = filtered.filter(r => r.status === 'succeeded');
+  const totalRevenue = succeeded.reduce((s, r) => s + r.amount, 0);
+  const totalTips = succeeded.reduce((s, r) => s + r.tip_amount, 0);
+  const totalTx = succeeded.length;
+  const tipTx = succeeded.filter(r => r.tip_amount > 0).length;
+  const tipRate = totalTx > 0 ? (tipTx / totalTx * 100) : 0;
+  const avgTx = totalTx > 0 ? totalRevenue / totalTx : 0;
+  const avgTip = tipTx > 0 ? totalTips / tipTx : 0;
+
+  // KPIs
+  document.getElementById('kpi-row').innerHTML = `
+    <div class="kpi">
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-val accent-gold">${fmtCur(totalRevenue)}</div>
+      <div class="kpi-sub">${totalTx.toLocaleString()} transactions</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Total Tips</div>
+      <div class="kpi-val accent-gold">${fmtCur(totalTips)}</div>
+      <div class="kpi-sub">${tipTx.toLocaleString()} tipped transactions</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Tip Rate</div>
+      <div class="kpi-val accent-green">${tipRate.toFixed(1)}%</div>
+      <div class="kpi-sub">of succeeded transactions</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Avg Transaction</div>
+      <div class="kpi-val">${fmtCur(avgTx)}</div>
+      <div class="kpi-sub">excl. tips</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Avg Tip</div>
+      <div class="kpi-val accent-gold">${fmtCur(avgTip)}</div>
+      <div class="kpi-sub">when tip given</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Terminal vs Online</div>
+      <div class="kpi-val accent-blue">${Math.round(succeeded.filter(r => r.type === 'terminal').length / Math.max(totalTx, 1) * 100)}%</div>
+      <div class="kpi-sub">terminal transactions</div>
+    </div>
+  `;
+
+  // City strips
+  const cities = [...new Set(RAW.map(r => r.city))].sort();
+  const maxRev = Math.max(...cities.map(c => succeeded.filter(r => r.city === c).reduce((s, r) => s + r.amount, 0)));
+  document.getElementById('city-row').innerHTML = cities.map(c => {
+    const cRows = succeeded.filter(r => r.city === c);
+    const rev = cRows.reduce((s, r) => s + r.amount, 0);
+    const tips = cRows.reduce((s, r) => s + r.tip_amount, 0);
+    const tipPct = rev > 0 ? tips / rev * 100 : 0;
+    const barW = maxRev > 0 ? rev / maxRev * 100 : 0;
+    const isActive = activeCity === c ? ' active' : '';
+    return `<div class="city-card${isActive}" onclick="toggleCity('${c}')">
+      <div class="city-name">${c}</div>
+      <div class="city-revenue">${fmtCurShort(rev)}</div>
+      <div class="city-meta">${cRows.length} tx · ${fmtCur(tips)} tips</div>
+      <div class="city-tip-bar"><div class="city-tip-fill" style="width:${barW.toFixed(1)}%"></div></div>
+    </div>`;
+  }).join('');
+
+  renderCharts(succeeded);
+  renderHeatmap(succeeded);
+  renderTable();
+}
+
+function toggleCity(city) {
+  activeCity = activeCity === city ? '' : city;
+  const fCity = document.getElementById('f-city');
+  fCity.value = activeCity;
+  applyFilters();
+}
+
+// ── CHARTS ────────────────────────────────────────────
+function renderCharts(succeeded) {
+  const gridColor = 'rgba(255,255,255,0.04)';
+  const tickColor = '#444';
+  const baseScale = {
+    grid: { color: gridColor },
+    ticks: { color: tickColor, font: { size: 10, family: 'JetBrains Mono, monospace' } }
+  };
+
+  // ── Trend chart ──
+  const weekMap = {};
+  succeeded.forEach(r => {
+    if (!weekMap[r.week]) weekMap[r.week] = 0;
+    weekMap[r.week] += r.amount;
+  });
+  const weeks = Object.keys(weekMap).map(Number).sort((a, b) => a - b);
+  if (charts.trend) charts.trend.destroy();
+  charts.trend = new Chart(document.getElementById('chart-trend'), {
+    type: 'line',
+    data: {
+      labels: weeks.map(w => 'W' + w),
+      datasets: [{
+        label: 'Revenue',
+        data: weeks.map(w => Math.round(weekMap[w])),
+        borderColor: '#c8a96e',
+        backgroundColor: 'rgba(200,169,110,0.06)',
+        borderWidth: 2,
+        pointBackgroundColor: '#c8a96e',
+        pointRadius: 4,
+        tension: 0.4,
+        fill: true
+      }, {
+        label: 'Tips',
+        data: weeks.map(w => {
+          const tipMap = {};
+          succeeded.forEach(r => { if (!tipMap[r.week]) tipMap[r.week] = 0; tipMap[r.week] += r.tip_amount; });
+          return Math.round(tipMap[w] || 0);
+        }),
+        borderColor: '#4a9e6e',
+        backgroundColor: 'rgba(74,158,110,0.04)',
+        borderWidth: 1.5,
+        pointBackgroundColor: '#4a9e6e',
+        pointRadius: 3,
+        tension: 0.4,
+        fill: true,
+        borderDash: [4, 3]
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ...baseScale, grid: { color: gridColor } },
+        y: { ...baseScale, beginAtZero: true, ticks: { ...baseScale.ticks, callback: v => '€' + (v >= 1000 ? Math.round(v/1000) + 'k' : v) } }
+      }
+    }
+  });
+  document.getElementById('trend-badge').textContent = weeks.length + ' weeks';
+
+  // ── Type donut ──
+  const terminalTx = succeeded.filter(r => r.type === 'terminal');
+  const onlineTx = succeeded.filter(r => r.type === 'online');
+  const terminalRev = terminalTx.reduce((s, r) => s + r.amount, 0);
+  const onlineRev = onlineTx.reduce((s, r) => s + r.amount, 0);
+  const totalRev = terminalRev + onlineRev;
+  if (charts.type) charts.type.destroy();
+  const typeCanvas = document.getElementById('chart-type');
+  charts.type = new Chart(typeCanvas, {
+    type: 'doughnut',
+    data: {
+      labels: ['Terminal', 'Online'],
+      datasets: [{ data: [Math.round(terminalRev), Math.round(onlineRev)], backgroundColor: ['#4a7fc4', '#8a6ec4'], borderWidth: 0, hoverOffset: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '72%',
+      plugins: { legend: { display: false } }
+    }
+  });
+  document.getElementById('type-center-val').textContent = succeeded.length.toLocaleString();
+  document.getElementById('type-legend').innerHTML = [
+    { name: 'Terminal', color: '#4a7fc4', rev: terminalRev, pct: totalRev > 0 ? terminalRev/totalRev*100 : 0 },
+    { name: 'Online', color: '#8a6ec4', rev: onlineRev, pct: totalRev > 0 ? onlineRev/totalRev*100 : 0 }
+  ].map(item => `<div class="donut-item">
+    <div class="donut-dot" style="background:${item.color}"></div>
+    <span class="donut-name">${item.name}</span>
+    <span class="donut-pct">${item.pct.toFixed(0)}%</span>
+  </div>`).join('');
+
+  // ── Tip donut ──
+  const tipCount = succeeded.filter(r => r.tip_amount > 0).length;
+  const noTipCount = succeeded.filter(r => r.tip_amount === 0).length;
+  const tipRate = succeeded.length > 0 ? tipCount / succeeded.length * 100 : 0;
+  if (charts.tip) charts.tip.destroy();
+  charts.tip = new Chart(document.getElementById('chart-tip'), {
+    type: 'doughnut',
+    data: {
+      labels: ['With tip', 'No tip'],
+      datasets: [{ data: [tipCount, noTipCount], backgroundColor: ['#c8a96e', '#1a1a1f'], borderWidth: 0, hoverOffset: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '72%',
+      plugins: { legend: { display: false } }
+    }
+  });
+  document.getElementById('tip-center-val').textContent = tipRate.toFixed(0) + '%';
+  const totalTips2 = succeeded.reduce((s, r) => s + r.tip_amount, 0);
+  const avgTip2 = tipCount > 0 ? totalTips2 / tipCount : 0;
+  document.getElementById('tip-legend').innerHTML = `
+    <div class="donut-item"><div class="donut-dot" style="background:#c8a96e"></div><span class="donut-name">With tip</span><span class="donut-pct">${tipCount.toLocaleString()}</span></div>
+    <div class="donut-item"><div class="donut-dot" style="background:#1a1a1f;border:1px solid #333"></div><span class="donut-name">No tip</span><span class="donut-pct">${noTipCount.toLocaleString()}</span></div>
+    <div class="donut-item" style="margin-top:4px;padding-top:4px;border-top:1px solid var(--b1)"><span class="donut-name" style="color:var(--gold)">Avg tip</span><span class="donut-amt" style="color:var(--gold)">${fmtCur(avgTip2)}</span></div>
+  `;
+
+  // ── City bar chart ──
+  const cities = [...new Set(RAW.map(r => r.city))].sort();
+  const cityRevs = cities.map(c => Math.round(succeeded.filter(r => r.city === c).reduce((s, r) => s + r.amount, 0)));
+  const cityTips = cities.map(c => Math.round(succeeded.filter(r => r.city === c).reduce((s, r) => s + r.tip_amount, 0)));
+  const cityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc'];
+  if (charts.city) charts.city.destroy();
+  charts.city = new Chart(document.getElementById('chart-city'), {
+    type: 'bar',
+    data: {
+      labels: cities,
+      datasets: [
+        { label: 'Revenue', data: cityRevs, backgroundColor: cities.map((_, i) => cityColors[i % cityColors.length] + 'cc'), borderRadius: 4, borderSkipped: false },
+        { label: 'Tips', data: cityTips, backgroundColor: cities.map((_, i) => cityColors[i % cityColors.length] + '44'), borderRadius: 4, borderSkipped: false }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ...baseScale, stacked: false },
+        y: { ...baseScale, beginAtZero: true, ticks: { ...baseScale.ticks, callback: v => '€' + (v >= 1000 ? Math.round(v/1000) + 'k' : v) } }
+      }
+    }
+  });
+}
+
+// ── HEATMAP ───────────────────────────────────────────
+function renderHeatmap(succeeded) {
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const hours = [0,4,8,10,12,14,16,18,20,22];
+  const hourLabels = ['12am','4am','8am','10am','12pm','2pm','4pm','6pm','8pm','10pm'];
+
+  const grid = {};
+  days.forEach((d, di) => {
+    hours.forEach((h, hi) => {
+      grid[`${di}_${hi}`] = 0;
+    });
+  });
+
+  succeeded.forEach(r => {
+    const di = r.dayOfWeek;
+    const hi = hours.findIndex((h, i) => {
+      const next = hours[i+1] !== undefined ? hours[i+1] : 24;
+      return r.hour >= h && r.hour < next;
+    });
+    if (hi >= 0) grid[`${di}_${hi}`] += r.amount;
+  });
+
+  const vals = Object.values(grid);
+  const maxVal = Math.max(...vals, 1);
+
+  const goldStops = ['#1a1a1f','#2a2218','#3d3020','#5a4428','#7a5c30','#9a7040','#c8a96e'];
+
+  function getColor(val) {
+    const t = val / maxVal;
+    const idx = Math.floor(t * (goldStops.length - 1));
+    return goldStops[Math.min(idx, goldStops.length - 1)];
+  }
+
+  let html = '<div></div>';
+  days.forEach(d => { html += `<div class="heatmap-header">${d}</div>`; });
+  hours.forEach((h, hi) => {
+    html += `<div class="heatmap-label">${hourLabels[hi]}</div>`;
+    days.forEach((d, di) => {
+      const val = grid[`${di}_${hi}`] || 0;
+      const col = getColor(val);
+      html += `<div class="heatmap-cell" style="background:${col}" title="${d} ${hourLabels[hi]}: ${fmtCur(val)}"></div>`;
+    });
+  });
+  document.getElementById('heatmap').innerHTML = html;
+
+  document.getElementById('heatmap-legend').innerHTML = goldStops.map(c =>
+    `<div class="heatmap-legend-stop" style="background:${c}"></div>`
+  ).join('');
+}
+
+// ── TABLE ─────────────────────────────────────────────
+function renderTable() {
+  const sorted = [...filtered].sort((a, b) => {
+    let av = a[sortCol], bv = b[sortCol];
+    if (sortCol === 'date') { av = a.dateObj; bv = b.dateObj; }
+    if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+    return sortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+  });
+
+  const shown = sorted.slice(0, 500);
+  document.getElementById('table-count').textContent = filtered.length.toLocaleString() + ' transactions';
+
+  document.getElementById('tbody').innerHTML = shown.map(r => {
+    const statusBadge = r.status === 'succeeded'
+      ? '<span class="badge b-success">succeeded</span>'
+      : r.status === 'canceled'
+      ? '<span class="badge b-fail">canceled</span>'
+      : `<span class="badge b-pending">${r.status}</span>`;
+    const typeBadge = r.type === 'terminal'
+      ? '<span class="badge b-terminal">terminal</span>'
+      : '<span class="badge b-online">online</span>';
+    const tipHtml = r.tip_amount > 0
+      ? `<span class="tip-pill"><span class="tip-dot"></span>${fmtCur(r.tip_amount)}</span>`
+      : `<span class="mono" style="color:var(--muted)">—</span>`;
+
+    return `<tr>
+      <td class="mono" style="color:var(--muted2);white-space:nowrap">${r.date.substring(0,16)}</td>
+      <td style="font-weight:600;font-size:12px">${r.city}</td>
+      <td class="mono" style="color:var(--text)">${fmtCur(r.amount)}</td>
+      <td>${tipHtml}</td>
+      <td class="mono" style="color:var(--gold)">${fmtCur(r.total_amount)}</td>
+      <td>${statusBadge}</td>
+      <td>${typeBadge}</td>
+      <td class="mono" style="color:var(--muted)">${r.currency}</td>
+    </tr>`;
+  }).join('');
+
+  const totalRevenue = filtered.filter(r => r.status === 'succeeded').reduce((s, r) => s + r.amount, 0);
+  const totalTips = filtered.filter(r => r.status === 'succeeded').reduce((s, r) => s + r.tip_amount, 0);
+  document.getElementById('tfoot-left').textContent = `Showing ${shown.length} of ${filtered.length} transactions`;
+  document.getElementById('tfoot-right').textContent = `Revenue: ${fmtCur(totalRevenue)} · Tips: ${fmtCur(totalTips)}`;
+}
+
+// ── UTILS ─────────────────────────────────────────────
+function fmtCur(n) {
+  return '€' + (Math.round(n * 100) / 100).toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtCurShort(n) {
+  if (n >= 1000000) return '€' + (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return '€' + (n / 1000).toFixed(1) + 'k';
+  return fmtCur(n);
+}
+function show(id) {
+  ['auth-screen', 'loading-screen', 'dashboard'].forEach(s => {
+    const el = document.getElementById(s);
+    el.style.display = s === id ? (s === 'loading-screen' ? 'flex' : 'block') : 'none';
+  });
+}
+function setLoading(msg) { document.getElementById('loading-text').textContent = msg; }
+</script>
+</body>
+</html>
