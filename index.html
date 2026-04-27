@@ -297,7 +297,7 @@ tr:hover td { background: rgba(255,255,255,0.012); }
     </select>
     <select id="f-type" onchange="applyFilters()">
       <option value="">All types</option>
-      <option value="terminal">Terminal</option>
+      <option value="in-store">In-store</option>
       <option value="online">Online</option>
     </select>
     <select id="f-tip" onchange="applyFilters()">
@@ -478,11 +478,12 @@ function parseCSV(content, filename) {
   const headers = parseLine(lines[0], delim).map(h => h.trim());
   const rows = [];
 
-  // Extract city and week from filename: stripe_W18_April2026_Brussels.csv
-  // City is always the last segment before .csv
+  // Extract city and week from filename: stripe_W18_2026_stripe_Berlin_April2026.csv
   const weekMatch = filename.match(/stripe_W(\d+)/i);
-  const cityMatch = filename.match(/stripe_W\d+_[^_]+_([^_.]+)\.csv/i);
-  const city = cityMatch ? cityMatch[1] : filename.replace(/stripe_W\d+_[^_]+_/i,'').replace('.csv','').trim() || 'Unknown';
+  const cityMatch = filename.match(/stripe_W\d+_\d+_stripe_([^_]+)_/i);
+  const rawCity = cityMatch ? cityMatch[1] : 'Unknown';
+  // Clean city name — capitalize first letter only
+  const city = rawCity.charAt(0).toUpperCase() + rawCity.slice(1).toLowerCase();
   const week = weekMatch ? parseInt(weekMatch[1]) : 0;
 
   for (let i = 1; i < lines.length; i++) {
@@ -500,8 +501,8 @@ function parseCSV(content, filename) {
     const hour = isNaN(dateObj) ? 12 : dateObj.getHours();
     const dayOfWeek = isNaN(dateObj) ? 0 : dateObj.getDay();
     const month = isNaN(dateObj) ? '' : dateStr.substring(0, 7);
-    const typeVal = obj['type (metadata)'] || obj['Type'] || '';
-    const payType = typeVal.toLowerCase().includes('terminal') || typeVal === '' && obj['Card ID'] ? 'terminal' : 'online';
+    const cardId = (obj['Card ID'] || '').trim();
+    const payType = cardId.toLowerCase().startsWith('card_') ? 'in-store' : 'online';
 
     rows.push({
       id: obj['id'] || obj['Id'] || '',
@@ -518,6 +519,7 @@ function parseCSV(content, filename) {
       currency: (obj['Currency'] || obj['currency'] || 'EUR').toUpperCase(),
       status: status,
       type: payType,
+      card_id: cardId,
       description: obj['Description'] || '',
       customer_email: obj['Customer Email'] || '',
       statement: obj['Statement Descriptor'] || '',
@@ -624,9 +626,9 @@ function renderAll() {
       <div class="kpi-sub">when tip given</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">Terminal vs Online</div>
-      <div class="kpi-val accent-blue">${Math.round(succeeded.filter(r => r.type === 'terminal').length / Math.max(totalTx, 1) * 100)}%</div>
-      <div class="kpi-sub">terminal transactions</div>
+      <div class="kpi-label">In-store vs Online</div>
+      <div class="kpi-val accent-blue">${Math.round(succeeded.filter(r => r.type === 'in-store').length / Math.max(totalTx, 1) * 100)}%</div>
+      <div class="kpi-sub">in-store transactions</div>
     </div>
   `;
 
@@ -671,78 +673,66 @@ function renderCharts(succeeded) {
     ticks: { color: tickColor, font: { size: 10, family: 'JetBrains Mono, monospace' } }
   };
 
-  // ── Trend chart ──
-  const weekMap = {};
-  succeeded.forEach(r => {
-    if (!weekMap[r.week]) weekMap[r.week] = 0;
-    weekMap[r.week] += r.amount;
+  // ── Trend chart — one line per city ──
+  const activeCities = [...new Set(succeeded.map(r => r.city))].sort();
+  const allWeeks = [...new Set(succeeded.map(r => r.week))].sort((a, b) => a - b);
+  const cityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc'];
+  const trendDatasets = activeCities.map((city, i) => {
+    const cityRows = succeeded.filter(r => r.city === city);
+    const weekMap = {};
+    cityRows.forEach(r => { if (!weekMap[r.week]) weekMap[r.week] = 0; weekMap[r.week] += r.amount; });
+    return {
+      label: city,
+      data: allWeeks.map(w => Math.round(weekMap[w] || 0)),
+      borderColor: cityColors[i % cityColors.length],
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      pointBackgroundColor: cityColors[i % cityColors.length],
+      pointRadius: 3,
+      tension: 0.4,
+      fill: false
+    };
   });
-  const weeks = Object.keys(weekMap).map(Number).sort((a, b) => a - b);
   if (charts.trend) charts.trend.destroy();
   charts.trend = new Chart(document.getElementById('chart-trend'), {
     type: 'line',
-    data: {
-      labels: weeks.map(w => 'W' + w),
-      datasets: [{
-        label: 'Revenue',
-        data: weeks.map(w => Math.round(weekMap[w])),
-        borderColor: '#c8a96e',
-        backgroundColor: 'rgba(200,169,110,0.06)',
-        borderWidth: 2,
-        pointBackgroundColor: '#c8a96e',
-        pointRadius: 4,
-        tension: 0.4,
-        fill: true
-      }, {
-        label: 'Tips',
-        data: weeks.map(w => {
-          const tipMap = {};
-          succeeded.forEach(r => { if (!tipMap[r.week]) tipMap[r.week] = 0; tipMap[r.week] += r.tip_amount; });
-          return Math.round(tipMap[w] || 0);
-        }),
-        borderColor: '#4a9e6e',
-        backgroundColor: 'rgba(74,158,110,0.04)',
-        borderWidth: 1.5,
-        pointBackgroundColor: '#4a9e6e',
-        pointRadius: 3,
-        tension: 0.4,
-        fill: true,
-        borderDash: [4, 3]
-      }]
-    },
+    data: { labels: allWeeks.map(w => 'W' + w), datasets: trendDatasets },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: { color: '#666', font: { size: 10, family: 'JetBrains Mono, monospace' }, boxWidth: 10, padding: 12 }
+        }
+      },
       scales: {
         x: { ...baseScale, grid: { color: gridColor } },
         y: { ...baseScale, beginAtZero: true, ticks: { ...baseScale.ticks, callback: v => '€' + (v >= 1000 ? Math.round(v/1000) + 'k' : v) } }
       }
     }
   });
-  document.getElementById('trend-badge').textContent = weeks.length + ' weeks';
+  document.getElementById('trend-badge').textContent = allWeeks.length + ' weeks';
 
   // ── Type donut ──
-  const terminalTx = succeeded.filter(r => r.type === 'terminal');
+  const inStoreTx = succeeded.filter(r => r.type === 'in-store');
   const onlineTx = succeeded.filter(r => r.type === 'online');
-  const terminalRev = terminalTx.reduce((s, r) => s + r.amount, 0);
+  const inStoreRev = inStoreTx.reduce((s, r) => s + r.amount, 0);
   const onlineRev = onlineTx.reduce((s, r) => s + r.amount, 0);
-  const totalRev = terminalRev + onlineRev;
+  const totalRev = inStoreRev + onlineRev;
   if (charts.type) charts.type.destroy();
   const typeCanvas = document.getElementById('chart-type');
   charts.type = new Chart(typeCanvas, {
     type: 'doughnut',
     data: {
-      labels: ['Terminal', 'Online'],
-      datasets: [{ data: [Math.round(terminalRev), Math.round(onlineRev)], backgroundColor: ['#4a7fc4', '#8a6ec4'], borderWidth: 0, hoverOffset: 4 }]
+      labels: ['In-store', 'Online'],
+      datasets: [{ data: [Math.round(inStoreRev), Math.round(onlineRev)], backgroundColor: ['#4a7fc4', '#8a6ec4'], borderWidth: 0, hoverOffset: 4 }]
     },
-    options: {
-      responsive: true, maintainAspectRatio: false, cutout: '72%',
-      plugins: { legend: { display: false } }
-    }
+    options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false } } }
   });
   document.getElementById('type-center-val').textContent = succeeded.length.toLocaleString();
   document.getElementById('type-legend').innerHTML = [
-    { name: 'Terminal', color: '#4a7fc4', rev: terminalRev, pct: totalRev > 0 ? terminalRev/totalRev*100 : 0 },
+    { name: 'In-store', color: '#4a7fc4', rev: inStoreRev, pct: totalRev > 0 ? inStoreRev/totalRev*100 : 0 },
     { name: 'Online', color: '#8a6ec4', rev: onlineRev, pct: totalRev > 0 ? onlineRev/totalRev*100 : 0 }
   ].map(item => `<div class="donut-item">
     <div class="donut-dot" style="background:${item.color}"></div>
