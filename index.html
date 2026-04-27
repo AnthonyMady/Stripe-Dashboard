@@ -554,21 +554,24 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
     const payType = cardId.toLowerCase().startsWith('card_') ? 'in-store' : 'online';
     const piId = (obj['payment_intent_id'] || '').trim();
 
-    // Determine city
-    // Belgium file: use Odoo map to split into Brussels/Anvers
-    // If no Odoo map yet → keep as Belgium
-    // Anvers file: merge with Anvers from Belgium split → city = Anvers
+    // Calculate week from actual transaction date so W18 filter shows only W18 transactions
+    let txWeek = week;
+    if (!isNaN(dateObj)) {
+      const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()));
+      d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+      txWeek = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    }
+
+    // Determine city using Odoo mapping for Belgium
     let city = fileCity;
     if (isBelgium && odooLoaded && piId && odooMap[piId]) {
-      city = odooMap[piId]; // 'Brussels' or 'Anvers'
+      city = odooMap[piId];
     } else if (isBelgium && odooLoaded && !odooMap[piId]) {
       city = 'Belgium (unmapped)';
     }
 
-    // Tips:
-    // Belgium/Anvers: 0 if no Odoo mapping loaded
-    // Belgium/Anvers with Odoo: use tip_amount from CSV (already 0 from script, tips handled separately)
-    // Other locations: use tip_amount from CSV normally
+    // Tips: use CSV value always, zero only if Belgium/Anvers with no Odoo file yet
     let tip = parseFloat((obj['tip_amount'] || '0').replace(',', '.')) || 0;
     if ((fileCity === 'Belgium' || fileCity === 'Anvers') && !odooLoaded) {
       tip = 0;
@@ -583,7 +586,7 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
       hour: hour,
       dayOfWeek: dayOfWeek,
       month: month,
-      week: week,
+      week: txWeek,
       city: city,
       fileCity: fileCity,
       amount: amount,
@@ -616,7 +619,7 @@ function parseLine(line, delim) {
 // ── FILTERS ───────────────────────────────────────────
 function populateFilters() {
   const cities = [...new Set(RAW.map(r => r.city))].sort();
-  const weeks = [...new Set(RAW.map(r => r.week))].filter(Boolean).sort((a,b) => b-a);
+  const weeks = [...new Set(RAW.map(r => r.week))].filter(Boolean).sort((a,b) => a-b);
   const months = [...new Set(RAW.map(r => r.month))].filter(Boolean).sort().reverse();
 
   const fCity = document.getElementById('f-city');
@@ -663,7 +666,7 @@ function sortBy(col) {
 
 // ── RENDER ────────────────────────────────────────────
 function renderAll() {
-  const succeeded = filtered.filter(r => r.status === 'paid' || r.status === 'succeeded' && r.status !== 'canceled' && r.status !== 'failed');
+  const succeeded = filtered.filter(r => r.status === 'paid' || r.status === 'succeeded');
   const totalRevenue = succeeded.reduce((s, r) => s + r.amount, 0);
   const totalTips = succeeded.reduce((s, r) => s + r.tip_amount, 0);
   const totalTx = succeeded.length;
@@ -708,7 +711,7 @@ function renderAll() {
 
   // City strips
   const cities = [...new Set(RAW.map(r => r.city))].sort();
-  const allSucceeded = RAW.filter(r => r.status === 'succeeded');
+  const allSucceeded = RAW.filter(r => r.status === 'paid' || r.status === 'succeeded');
   const maxRev = Math.max(...cities.map(c => allSucceeded.filter(r => r.city === c).reduce((s, r) => s + r.amount, 0)));
   document.getElementById('city-row').innerHTML = cities.map(c => {
     const cRows = succeeded.filter(r => r.city === c);
@@ -937,8 +940,8 @@ function renderTable() {
       : r.status === 'canceled'
       ? '<span class="badge b-fail">Canceled</span>'
       : `<span class="badge b-pending">${r.status}</span>`;
-    const typeBadge = r.type === 'terminal'
-      ? '<span class="badge b-terminal">terminal</span>'
+    const typeBadge = r.type === 'in-store'
+      ? '<span class="badge b-terminal">in-store</span>'
       : '<span class="badge b-online">online</span>';
     const tipHtml = r.tip_amount > 0
       ? `<span class="tip-pill"><span class="tip-dot"></span>${fmtCur(r.tip_amount)}</span>`
@@ -956,8 +959,8 @@ function renderTable() {
     </tr>`;
   }).join('');
 
-  const totalRevenue = filtered.filter(r => r.status === 'succeeded').reduce((s, r) => s + r.amount, 0);
-  const totalTips = filtered.filter(r => r.status === 'succeeded').reduce((s, r) => s + r.tip_amount, 0);
+  const totalRevenue = filtered.filter(r => r.status === 'paid' || r.status === 'succeeded').reduce((s, r) => s + r.amount, 0);
+  const totalTips = filtered.filter(r => r.status === 'paid' || r.status === 'succeeded').reduce((s, r) => s + r.tip_amount, 0);
   document.getElementById('tfoot-left').textContent = `Showing ${shown.length} of ${filtered.length} transactions`;
   document.getElementById('tfoot-right').textContent = `Revenue: ${fmtCur(totalRevenue)} · Tips: ${fmtCur(totalTips)}`;
 }
