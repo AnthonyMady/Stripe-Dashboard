@@ -292,7 +292,9 @@ tr:hover td { background: rgba(255,255,255,0.012); }
     <div class="filter-sep"></div>
     <select id="f-status" onchange="applyFilters()">
       <option value="">All statuses</option>
-      <option value="succeeded">Succeeded</option>
+      <option value="paid">Paid</option>
+      <option value="failed">Failed</option>
+      <option value="refunded">Refunded</option>
       <option value="canceled">Canceled</option>
     </select>
     <select id="f-type" onchange="applyFilters()">
@@ -492,9 +494,9 @@ function parseCSV(content, filename) {
     const obj = {};
     headers.forEach((h, idx) => { obj[h] = (vals[idx] || '').trim(); });
 
-    const amount = parseFloat(obj['Amount'] || obj['base_amount']) || 0;
-    const tip = parseFloat(obj['tip_amount']) || 0;
-    const total = parseFloat(obj['total_amount'] || obj['Amount']) || (amount + tip);
+    const amount = parseFloat((obj['Amount'] || '0').replace(',', '.')) || 0;
+    const tip = parseFloat((obj['tip_amount'] || '0').replace(',', '.')) || 0;
+    const total = parseFloat((obj['total_amount'] || obj['Amount'] || '0').replace(',', '.')) || (amount + tip);
     const status = (obj['Status'] || obj['status'] || '').toLowerCase();
     const dateStr = obj['Created date (UTC)'] || obj['date'] || '';
     const dateObj = new Date(dateStr);
@@ -589,7 +591,7 @@ function sortBy(col) {
 
 // ── RENDER ────────────────────────────────────────────
 function renderAll() {
-  const succeeded = filtered.filter(r => r.status === 'succeeded' && r.status !== 'canceled' && r.status !== 'failed');
+  const succeeded = filtered.filter(r => r.status === 'paid' || r.status === 'succeeded' && r.status !== 'canceled' && r.status !== 'failed');
   const totalRevenue = succeeded.reduce((s, r) => s + r.amount, 0);
   const totalTips = succeeded.reduce((s, r) => s + r.tip_amount, 0);
   const totalTx = succeeded.length;
@@ -854,10 +856,14 @@ function renderTable() {
   document.getElementById('table-count').textContent = filtered.length.toLocaleString() + ' transactions';
 
   document.getElementById('tbody').innerHTML = shown.map(r => {
-    const statusBadge = r.status === 'succeeded'
-      ? '<span class="badge b-success">succeeded</span>'
+    const statusBadge = r.status === 'paid'
+      ? '<span class="badge b-success">Paid</span>'
+      : r.status === 'failed'
+      ? '<span class="badge b-fail">Failed</span>'
+      : r.status === 'refunded'
+      ? '<span class="badge b-pending">Refunded</span>'
       : r.status === 'canceled'
-      ? '<span class="badge b-fail">canceled</span>'
+      ? '<span class="badge b-fail">Canceled</span>'
       : `<span class="badge b-pending">${r.status}</span>`;
     const typeBadge = r.type === 'terminal'
       ? '<span class="badge b-terminal">terminal</span>'
