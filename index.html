@@ -389,7 +389,7 @@ tr:hover td { background: rgba(255,255,255,0.012); }
             <th onclick="sortBy('total_amount')">Total</th>
             <th>Status</th>
             <th>Type</th>
-            <th onclick="sortBy('currency')">Currency</th>
+            <th>Payment Intent</th>
           </tr></thead>
           <tbody id="tbody"></tbody>
         </table>
@@ -434,23 +434,34 @@ function showErr(msg) {
 async function loadData() {
   show('loading-screen'); setLoading('Scanning Drive folder…');
   try {
-    const csvRes = await driveApi(`files?q='${FOLDER_ID}' in parents and name contains 'stripe_' and trashed=false&fields=files(id,name,modifiedTime)&orderBy=name desc&supportsAllDrives=true&includeItemsFromAllDrives=true`);
-    if (!csvRes.files || !csvRes.files.length) throw new Error('No Stripe CSV files found in folder');
+    const allFiles = await getAllFiles(FOLDER_ID);
+    const stripeFiles = allFiles.filter(f => f.name.toLowerCase().includes('stripe_') && f.name.endsWith('.csv'));
+    const odooFiles  = allFiles.filter(f => f.name.toLowerCase().includes('odoo_pos_') && f.name.endsWith('.csv'));
 
-    setLoading(`Loading ${csvRes.files.length} file(s)…`);
+    if (!stripeFiles.length) throw new Error('No Stripe CSV files found in folder or subfolders');
+
+    setLoading('Loading Odoo branch mapping…');
+    const odooMap = {};
+    let odooLoaded = false;
+    for (const file of odooFiles) {
+      const content = await driveDownload(file.id);
+      parseOdooMapping(content, odooMap);
+      odooLoaded = true;
+    }
+
+    setLoading(`Loading ${stripeFiles.length} Stripe file(s)…`);
     RAW = [];
-    let loaded = 0;
-    for (const file of csvRes.files) {
+    for (const file of stripeFiles) {
       setLoading(`Parsing ${file.name}…`);
       const content = await driveDownload(file.id);
-      const rows = parseCSV(content, file.name);
+      const rows = parseCSV(content, file.name, odooMap, odooLoaded);
       RAW = RAW.concat(rows);
-      loaded++;
     }
 
     const weeks = [...new Set(RAW.map(r => r.week))].sort();
     const latestWeek = weeks[weeks.length - 1];
-    document.getElementById('hdr-ctx').textContent = `${RAW.length.toLocaleString()} transactions · ${csvRes.files.length} files`;
+    const odooStatus = odooLoaded ? '· Odoo mapped' : '· No Odoo mapping yet';
+    document.getElementById('hdr-ctx').textContent = `${RAW.length.toLocaleString()} transactions · ${stripeFiles.length} files ${odooStatus}`;
     document.getElementById('hdr-week').textContent = `W${latestWeek} · ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
     populateFilters();
@@ -459,6 +470,43 @@ async function loadData() {
   } catch (e) {
     show('dashboard');
     document.querySelector('main').innerHTML = `<div style="background:var(--red-dim);border:1px solid rgba(196,80,79,0.25);border-radius:var(--r);padding:16px 20px;color:#e07070;font-size:12px;margin:32px 0;font-family:'JetBrains Mono',monospace">⚠ ${e.message}</div>`;
+  }
+}
+
+// ── GET ALL FILES RECURSIVELY ─────────────────────────
+async function getAllFiles(folderId) {
+  const results = [];
+  const filesRes = await driveApi(`files?q='${folderId}' in parents and mimeType!='application/vnd.google-apps.folder' and trashed=false&fields=files(id,name,modifiedTime)&supportsAllDrives=true&includeItemsFromAllDrives=true`);
+  if (filesRes.files) results.push(...filesRes.files);
+  const foldersRes = await driveApi(`files?q='${folderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id,name)&supportsAllDrives=true&includeItemsFromAllDrives=true`);
+  if (foldersRes.files) {
+    for (const folder of foldersRes.files) {
+      const subFiles = await getAllFiles(folder.id);
+      results.push(...subFiles);
+    }
+  }
+  return results;
+}
+
+// ── ODOO MAPPING PARSER ───────────────────────────────
+function parseOdooMapping(content, odooMap) {
+  const lines = content.trim().split('\n');
+  if (lines.length < 2) return;
+  const delim = lines[0].includes(';') ? ';' : ',';
+  const headers = parseLine(lines[0], delim).map(h => h.trim());
+  const piIdx  = headers.findIndex(h => h.toLowerCase().includes('payment transaction'));
+  const posIdx = headers.findIndex(h => h.toLowerCase().includes('point of sale'));
+  if (piIdx === -1 || posIdx === -1) return;
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseLine(lines[i], delim);
+    const piId = (vals[piIdx]  || '').trim().replace(/^"|"$/g, '');
+    const pos  = (vals[posIdx] || '').trim().replace(/^"|"$/g, '');
+    if (!piId || !piId.startsWith('pi_')) continue;
+    if (pos.toLowerCase().includes('brussels') || pos.toLowerCase().includes('bruxelles')) {
+      odooMap[piId] = 'Brussels';
+    } else if (pos.toLowerCase().includes('anvers') || pos.toLowerCase().includes('antwerp')) {
+      odooMap[piId] = 'Anvers';
+    }
   }
 }
 
@@ -473,7 +521,8 @@ async function driveDownload(fileId) {
 }
 
 // ── CSV PARSER ────────────────────────────────────────
-function parseCSV(content, filename) {
+function parseCSV(content, filename, odooMap, odooLoaded) {
+  odooMap = odooMap || {};
   const lines = content.trim().split('\n');
   if (lines.length < 2) return [];
   const delim = lines[0].includes(';') ? ';' : ',';
@@ -484,9 +533,9 @@ function parseCSV(content, filename) {
   const weekMatch = filename.match(/stripe_W(\d+)/i);
   const cityMatch = filename.match(/stripe_W\d+_\d+_stripe_([^_]+)_/i);
   const rawCity = cityMatch ? cityMatch[1] : 'Unknown';
-  // Clean city name — capitalize first letter only
-  const city = rawCity.charAt(0).toUpperCase() + rawCity.slice(1).toLowerCase();
+  const fileCity = rawCity.charAt(0).toUpperCase() + rawCity.slice(1).toLowerCase();
   const week = weekMatch ? parseInt(weekMatch[1]) : 0;
+  const isBelgium = fileCity === 'Belgium';
 
   for (let i = 1; i < lines.length; i++) {
     const vals = parseLine(lines[i], delim);
@@ -495,8 +544,6 @@ function parseCSV(content, filename) {
     headers.forEach((h, idx) => { obj[h] = (vals[idx] || '').trim(); });
 
     const amount = parseFloat((obj['Amount'] || '0').replace(',', '.')) || 0;
-    const tip = parseFloat((obj['tip_amount'] || '0').replace(',', '.')) || 0;
-    const total = parseFloat((obj['total_amount'] || obj['Amount'] || '0').replace(',', '.')) || (amount + tip);
     const status = (obj['Status'] || obj['status'] || '').toLowerCase();
     const dateStr = obj['Created date (UTC)'] || obj['date'] || '';
     const dateObj = new Date(dateStr);
@@ -505,9 +552,32 @@ function parseCSV(content, filename) {
     const month = isNaN(dateObj) ? '' : dateStr.substring(0, 7);
     const cardId = (obj['Card ID'] || '').trim();
     const payType = cardId.toLowerCase().startsWith('card_') ? 'in-store' : 'online';
+    const piId = (obj['payment_intent_id'] || '').trim();
+
+    // Determine city
+    // Belgium file: use Odoo map to split into Brussels/Anvers
+    // If no Odoo map yet → keep as Belgium
+    // Anvers file: merge with Anvers from Belgium split → city = Anvers
+    let city = fileCity;
+    if (isBelgium && odooLoaded && piId && odooMap[piId]) {
+      city = odooMap[piId]; // 'Brussels' or 'Anvers'
+    } else if (isBelgium && odooLoaded && !odooMap[piId]) {
+      city = 'Belgium (unmapped)';
+    }
+
+    // Tips:
+    // Belgium/Anvers: 0 if no Odoo mapping loaded
+    // Belgium/Anvers with Odoo: use tip_amount from CSV (already 0 from script, tips handled separately)
+    // Other locations: use tip_amount from CSV normally
+    let tip = parseFloat((obj['tip_amount'] || '0').replace(',', '.')) || 0;
+    if ((fileCity === 'Belgium' || fileCity === 'Anvers') && !odooLoaded) {
+      tip = 0;
+    }
+
+    const total = amount + tip;
 
     rows.push({
-      id: obj['id'] || obj['Id'] || '',
+      id: obj['id'] || '',
       date: dateStr,
       dateObj: dateObj,
       hour: hour,
@@ -515,6 +585,7 @@ function parseCSV(content, filename) {
       month: month,
       week: week,
       city: city,
+      fileCity: fileCity,
       amount: amount,
       tip_amount: tip,
       total_amount: total,
@@ -522,6 +593,7 @@ function parseCSV(content, filename) {
       status: status,
       type: payType,
       card_id: cardId,
+      payment_intent_id: piId,
       description: obj['Description'] || '',
       customer_email: obj['Customer Email'] || '',
       statement: obj['Statement Descriptor'] || '',
@@ -880,7 +952,7 @@ function renderTable() {
       <td class="mono" style="color:var(--gold)">${fmtCur(r.total_amount)}</td>
       <td>${statusBadge}</td>
       <td>${typeBadge}</td>
-      <td class="mono" style="color:var(--muted)">${r.currency}</td>
+      <td class="mono" style="color:var(--muted);font-size:10px">${r.payment_intent_id ? r.payment_intent_id.substring(0,24) + '…' : '—'}</td>
     </tr>`;
   }).join('');
 
