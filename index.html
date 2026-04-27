@@ -479,9 +479,10 @@ function parseCSV(content, filename) {
   const rows = [];
 
   // Extract city and week from filename: stripe_W18_April2026_Brussels.csv
-  const cityMatch = filename.match(/stripe_W\d+_\w+_(\w+)\.csv/i);
+  // City is always the last segment before .csv
   const weekMatch = filename.match(/stripe_W(\d+)/i);
-  const city = cityMatch ? cityMatch[1] : 'Unknown';
+  const cityMatch = filename.match(/stripe_W\d+_[^_]+_([^_.]+)\.csv/i);
+  const city = cityMatch ? cityMatch[1] : filename.replace(/stripe_W\d+_[^_]+_/i,'').replace('.csv','').trim() || 'Unknown';
   const week = weekMatch ? parseInt(weekMatch[1]) : 0;
 
   for (let i = 1; i < lines.length; i++) {
@@ -586,7 +587,7 @@ function sortBy(col) {
 
 // ── RENDER ────────────────────────────────────────────
 function renderAll() {
-  const succeeded = filtered.filter(r => r.status === 'succeeded');
+  const succeeded = filtered.filter(r => r.status === 'succeeded' && r.status !== 'canceled' && r.status !== 'failed');
   const totalRevenue = succeeded.reduce((s, r) => s + r.amount, 0);
   const totalTips = succeeded.reduce((s, r) => s + r.tip_amount, 0);
   const totalTx = succeeded.length;
@@ -631,13 +632,15 @@ function renderAll() {
 
   // City strips
   const cities = [...new Set(RAW.map(r => r.city))].sort();
-  const maxRev = Math.max(...cities.map(c => succeeded.filter(r => r.city === c).reduce((s, r) => s + r.amount, 0)));
+  const allSucceeded = RAW.filter(r => r.status === 'succeeded');
+  const maxRev = Math.max(...cities.map(c => allSucceeded.filter(r => r.city === c).reduce((s, r) => s + r.amount, 0)));
   document.getElementById('city-row').innerHTML = cities.map(c => {
     const cRows = succeeded.filter(r => r.city === c);
+    const allCRows = allSucceeded.filter(r => r.city === c);
     const rev = cRows.reduce((s, r) => s + r.amount, 0);
     const tips = cRows.reduce((s, r) => s + r.tip_amount, 0);
-    const tipPct = rev > 0 ? tips / rev * 100 : 0;
-    const barW = maxRev > 0 ? rev / maxRev * 100 : 0;
+    const allRev = allCRows.reduce((s, r) => s + r.amount, 0);
+    const barW = maxRev > 0 ? allRev / maxRev * 100 : 0;
     const isActive = activeCity === c ? ' active' : '';
     return `<div class="city-card${isActive}" onclick="toggleCity('${c}')">
       <div class="city-name">${c}</div>
@@ -773,18 +776,18 @@ function renderCharts(succeeded) {
   `;
 
   // ── City bar chart ──
-  const cities = [...new Set(RAW.map(r => r.city))].sort();
-  const cityRevs = cities.map(c => Math.round(succeeded.filter(r => r.city === c).reduce((s, r) => s + r.amount, 0)));
-  const cityTips = cities.map(c => Math.round(succeeded.filter(r => r.city === c).reduce((s, r) => s + r.tip_amount, 0)));
+  const cities2 = [...new Set(RAW.map(r => r.city))].sort();
+  const cityRevs = cities2.map(c => Math.round(succeeded.filter(r => r.city === c).reduce((s, r) => s + r.amount, 0)));
+  const cityTips = cities2.map(c => Math.round(succeeded.filter(r => r.city === c).reduce((s, r) => s + r.tip_amount, 0)));
   const cityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc'];
   if (charts.city) charts.city.destroy();
   charts.city = new Chart(document.getElementById('chart-city'), {
     type: 'bar',
     data: {
-      labels: cities,
+      labels: cities2,
       datasets: [
-        { label: 'Revenue', data: cityRevs, backgroundColor: cities.map((_, i) => cityColors[i % cityColors.length] + 'cc'), borderRadius: 4, borderSkipped: false },
-        { label: 'Tips', data: cityTips, backgroundColor: cities.map((_, i) => cityColors[i % cityColors.length] + '44'), borderRadius: 4, borderSkipped: false }
+        { label: 'Revenue', data: cityRevs, backgroundColor: cities2.map((_, i) => cityColors[i % cityColors.length] + 'cc'), borderRadius: 4, borderSkipped: false },
+        { label: 'Tips', data: cityTips, backgroundColor: cities2.map((_, i) => cityColors[i % cityColors.length] + '44'), borderRadius: 4, borderSkipped: false }
       ]
     },
     options: {
