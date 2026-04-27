@@ -564,19 +564,19 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
     }
 
     // Determine city using Odoo mapping for Belgium
+    // If pi_id matches Anvers in Odoo → Anvers
+    // Everything else in Belgium file → Brussels (default)
     let city = fileCity;
-    if (isBelgium && odooLoaded && piId && odooMap[piId]) {
-      city = odooMap[piId];
-    } else if (isBelgium && odooLoaded && !odooMap[piId]) {
-      city = 'Belgium (unmapped)';
+    if (isBelgium) {
+      if (odooLoaded && piId && odooMap[piId] === 'Anvers') {
+        city = 'Anvers';
+      } else {
+        city = 'Brussels';
+      }
     }
 
-    // Tips: use CSV value always, zero only if Belgium/Anvers with no Odoo file yet
-    let tip = parseFloat((obj['tip_amount'] || '0').replace(',', '.')) || 0;
-    if ((fileCity === 'Belgium' || fileCity === 'Anvers') && !odooLoaded) {
-      tip = 0;
-    }
-
+    // Tips — always use value from Stripe CSV, no zeroing
+    const tip = parseFloat((obj['tip_amount'] || '0').replace(',', '.')) || 0;
     const total = amount + tip;
 
     rows.push({
