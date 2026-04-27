@@ -676,7 +676,7 @@ function renderCharts(succeeded) {
   // ── Trend chart — one line per city ──
   const activeCities = [...new Set(succeeded.map(r => r.city))].sort();
   const allWeeks = [...new Set(succeeded.map(r => r.week))].sort((a, b) => a - b);
-  const cityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc'];
+  const trendCityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc'];
   const trendDatasets = activeCities.map((city, i) => {
     const cityRows = succeeded.filter(r => r.city === city);
     const weekMap = {};
@@ -684,10 +684,10 @@ function renderCharts(succeeded) {
     return {
       label: city,
       data: allWeeks.map(w => Math.round(weekMap[w] || 0)),
-      borderColor: cityColors[i % cityColors.length],
+      borderColor: trendCityColors[i % trendCityColors.length],
       backgroundColor: 'transparent',
       borderWidth: 2,
-      pointBackgroundColor: cityColors[i % cityColors.length],
+      pointBackgroundColor: trendCityColors[i % trendCityColors.length],
       pointRadius: 3,
       tension: 0.4,
       fill: false
