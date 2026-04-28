@@ -382,8 +382,10 @@ tr:hover td { background: rgba(255,255,255,0.012); }
       <div class="table-wrap">
         <table>
           <thead><tr>
-            <th onclick="sortBy('date')">Date</th>
+            <th onclick="sortBy('consumedDate')">Consumed</th>
+            <th onclick="sortBy('date')">Payment Date</th>
             <th onclick="sortBy('city')">City</th>
+            <th onclick="sortBy('playerAmount')">Players</th>
             <th onclick="sortBy('amount')">Amount</th>
             <th onclick="sortBy('tip_amount')">Tip</th>
             <th onclick="sortBy('total_amount')">Total</th>
@@ -460,8 +462,7 @@ async function loadData() {
 
     const weeks = [...new Set(RAW.map(r => r.week))].sort();
     const latestWeek = weeks[weeks.length - 1];
-    const odooStatus = odooLoaded ? '· Odoo mapped' : '· No Odoo mapping yet';
-    document.getElementById('hdr-ctx').textContent = `${RAW.length.toLocaleString()} transactions · ${stripeFiles.length} files ${odooStatus}`;
+    document.getElementById('hdr-ctx').textContent = `${RAW.length.toLocaleString()} transactions · ${stripeFiles.length} files`;
     document.getElementById('hdr-week').textContent = `W${latestWeek} · ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
     populateFilters();
@@ -550,20 +551,19 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
     const hour = isNaN(dateObj) ? 12 : dateObj.getHours();
     const dayOfWeek = isNaN(dateObj) ? 0 : dateObj.getDay();
     const month = isNaN(dateObj) ? '' : dateStr.substring(0, 7);
-    const cardId = (obj['Card ID'] || '').trim();
     const pmdType = (obj['Payment Method Type'] || '').trim().toLowerCase();
     const csvPayType = (obj['Payment Type'] || '').trim().toLowerCase();
-    // Use explicit Payment Type column if present (new CSVs)
-    // Fall back to pmd_type check, then card_ prefix for old CSVs
     const inStoreTypes = ['card_present', 'bancontact', 'interac_present'];
     const payType = csvPayType === 'in-store' ? 'in-store'
       : csvPayType === 'online' ? 'online'
       : inStoreTypes.includes(pmdType) ? 'in-store'
-      : cardId.toLowerCase().startsWith('card_') ? 'in-store'
       : 'online';
     const piId = (obj['payment_intent_id'] || '').trim();
+    const consumedDateStr = (obj['consumed_date'] || '').trim();
+    const playerAmount = (obj['player_amount'] || '').trim();
+    const paymentDateStr = (obj['payment_date'] || '').trim();
 
-    // Calculate week from actual transaction date so W18 filter shows only W18 transactions
+    // Calculate week from actual transaction date
     let txWeek = week;
     if (!isNaN(dateObj)) {
       const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()));
@@ -572,12 +572,28 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
       txWeek = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
     }
 
-    // Determine city using Odoo mapping for Belgium
-    // If pi_id matches Anvers in Odoo → Anvers
-    // Everything else in Belgium file → Brussels (default)
+    // Revenue date = consumed_date when available (accrual accounting), else payment date
+    const consumedDateObj = consumedDateStr ? new Date(consumedDateStr) : null;
+    const hasConsumedDate = consumedDateObj && !isNaN(consumedDateObj);
+    const revDateObj = hasConsumedDate ? consumedDateObj : dateObj;
+    const revenueMonth = !isNaN(revDateObj) ? revDateObj.toISOString().substring(0, 7) : month;
+    let revenueWeek = txWeek;
+    if (!isNaN(revDateObj)) {
+      const rd = new Date(Date.UTC(revDateObj.getFullYear(), revDateObj.getMonth(), revDateObj.getDate()));
+      rd.setUTCDate(rd.getUTCDate() + 4 - (rd.getUTCDay() || 7));
+      const ryearStart = new Date(Date.UTC(rd.getUTCFullYear(), 0, 1));
+      revenueWeek = Math.ceil((((rd - ryearStart) / 86400000) + 1) / 7);
+    }
+
+    // City: use location metadata first (new CSVs), fall back to Odoo mapping (old CSVs)
     let city = fileCity;
     if (isBelgium) {
-      if (odooLoaded && piId && odooMap[piId] === 'Anvers') {
+      const locMeta = (obj['location (metadata)'] || '').trim().toLowerCase();
+      if (locMeta === 'antwerp' || locMeta === 'anvers') {
+        city = 'Anvers';
+      } else if (locMeta === 'brussels' || locMeta === 'bruxelles') {
+        city = 'Brussels';
+      } else if (odooLoaded && piId && odooMap[piId] === 'Anvers') {
         city = 'Anvers';
       } else {
         city = 'Brussels';
@@ -592,10 +608,16 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
       id: obj['id'] || '',
       date: dateStr,
       dateObj: dateObj,
+      consumedDate: consumedDateStr,
+      consumedDateObj: consumedDateObj,
+      playerAmount: playerAmount,
+      paymentDate: paymentDateStr,
       hour: hour,
       dayOfWeek: dayOfWeek,
       month: month,
+      revenueMonth: revenueMonth,
       week: txWeek,
+      revenueWeek: revenueWeek,
       city: city,
       fileCity: fileCity,
       amount: amount,
@@ -604,10 +626,8 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
       currency: (obj['Currency'] || obj['currency'] || 'EUR').toUpperCase(),
       status: status,
       type: payType,
-      card_id: cardId,
       payment_intent_id: piId,
       description: obj['Description'] || '',
-      customer_email: obj['Customer Email'] || '',
       statement: obj['Statement Descriptor'] || '',
     });
   }
@@ -628,8 +648,8 @@ function parseLine(line, delim) {
 // ── FILTERS ───────────────────────────────────────────
 function populateFilters() {
   const cities = [...new Set(RAW.map(r => r.city))].sort();
-  const weeks = [...new Set(RAW.map(r => r.week))].filter(Boolean).sort((a,b) => a-b);
-  const months = [...new Set(RAW.map(r => r.month))].filter(Boolean).sort().reverse();
+  const weeks = [...new Set(RAW.map(r => r.revenueWeek))].filter(Boolean).sort((a,b) => a-b);
+  const months = [...new Set(RAW.map(r => r.revenueMonth))].filter(Boolean).sort().reverse();
 
   const fCity = document.getElementById('f-city');
   fCity.innerHTML = '<option value="">All cities</option>';
@@ -658,8 +678,8 @@ function applyFilters() {
 
   filtered = RAW.filter(r =>
     (!city || r.city === city) &&
-    (!week || r.week == week) &&
-    (!month || r.month === month) &&
+    (!week || r.revenueWeek == week) &&
+    (!month || r.revenueMonth === month) &&
     (!status || r.status === status) &&
     (!type || r.type === type) &&
     (!tip || (tip === 'yes' ? r.tip_amount > 0 : r.tip_amount === 0))
@@ -761,12 +781,12 @@ function renderCharts(succeeded) {
 
   // ── Trend chart — one line per city ──
   const activeCities = [...new Set(succeeded.map(r => r.city))].sort();
-  const allWeeks = [...new Set(succeeded.map(r => r.week))].sort((a, b) => a - b);
+  const allWeeks = [...new Set(succeeded.map(r => r.revenueWeek))].sort((a, b) => a - b);
   const trendCityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc'];
   const trendDatasets = activeCities.map((city, i) => {
     const cityRows = succeeded.filter(r => r.city === city);
     const weekMap = {};
-    cityRows.forEach(r => { if (!weekMap[r.week]) weekMap[r.week] = 0; weekMap[r.week] += r.amount; });
+    cityRows.forEach(r => { if (!weekMap[r.revenueWeek]) weekMap[r.revenueWeek] = 0; weekMap[r.revenueWeek] += r.amount; });
     return {
       label: city,
       data: allWeeks.map(w => Math.round(weekMap[w] || 0)),
@@ -932,6 +952,8 @@ function renderTable() {
   const sorted = [...filtered].sort((a, b) => {
     let av = a[sortCol], bv = b[sortCol];
     if (sortCol === 'date') { av = a.dateObj; bv = b.dateObj; }
+    if (sortCol === 'consumedDate') { av = a.consumedDateObj || a.dateObj; bv = b.consumedDateObj || b.dateObj; }
+    if (sortCol === 'playerAmount') { av = parseFloat(a.playerAmount) || 0; bv = parseFloat(b.playerAmount) || 0; }
     if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
     return sortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
   });
@@ -957,8 +979,10 @@ function renderTable() {
       : `<span class="mono" style="color:var(--muted)">—</span>`;
 
     return `<tr>
-      <td class="mono" style="color:var(--muted2);white-space:nowrap">${r.date.substring(0,16)}</td>
+      <td class="mono" style="color:${r.consumedDate ? 'var(--gold)' : 'var(--muted)'};white-space:nowrap">${r.consumedDate || '—'}</td>
+      <td class="mono" style="color:var(--muted2);white-space:nowrap">${r.date.substring(0,10)}</td>
       <td style="font-weight:600;font-size:12px">${r.city}</td>
+      <td class="mono" style="color:var(--muted2);text-align:center">${r.playerAmount || '—'}</td>
       <td class="mono" style="color:var(--text)">${fmtCur(r.amount)}</td>
       <td>${tipHtml}</td>
       <td class="mono" style="color:var(--gold)">${fmtCur(r.total_amount)}</td>
