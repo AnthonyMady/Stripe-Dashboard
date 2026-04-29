@@ -585,18 +585,23 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
       revenueWeek = Math.ceil((((rd - ryearStart) / 86400000) + 1) / 7);
     }
 
-    // City: use location metadata first (new CSVs), fall back to Odoo mapping (old CSVs)
+    // City detection for Belgium account:
+    // - In-store: use Reader Label (e.g. "Antwerp Card Reader" → Anvers)
+    // - Online: use location metadata, fall back to Odoo mapping, default Brussels
+    const readerLabel = (obj['Reader Label'] || '').toLowerCase();
     let city = fileCity;
     if (isBelgium) {
-      const locMeta = (obj['location (metadata)'] || '').trim().toLowerCase();
-      if (locMeta === 'antwerp' || locMeta === 'anvers') {
-        city = 'Anvers';
-      } else if (locMeta === 'brussels' || locMeta === 'bruxelles') {
-        city = 'Brussels';
-      } else if (odooLoaded && piId && odooMap[piId] === 'Anvers') {
-        city = 'Anvers';
+      if (payType === 'in-store') {
+        city = (readerLabel.includes('antwerp') || readerLabel.includes('anvers')) ? 'Anvers' : 'Brussels';
       } else {
-        city = 'Brussels';
+        const locMeta = (obj['location (metadata)'] || '').trim().toLowerCase();
+        if (locMeta === 'antwerp' || locMeta === 'anvers') {
+          city = 'Anvers';
+        } else if (odooLoaded && piId && odooMap[piId] === 'Anvers') {
+          city = 'Anvers';
+        } else {
+          city = 'Brussels';
+        }
       }
     }
 
