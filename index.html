@@ -530,9 +530,9 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
   const headers = parseLine(lines[0], delim).map(h => h.trim());
   const rows = [];
 
-  // Extract city and week from filename: stripe_W18_2026_stripe_Berlin_April2026.csv
+  // Extract city: stripe_2026_Berlin_YTD.csv (new) or stripe_W18_2026_stripe_Berlin_April2026.csv (legacy)
   const weekMatch = filename.match(/stripe_W(\d+)/i);
-  const cityMatch = filename.match(/stripe_W\d+_\d+_stripe_([^_]+)_/i);
+  const cityMatch = filename.match(/stripe_\d{4}_([^_]+)_YTD/i) || filename.match(/stripe_W\d+_\d+_stripe_([^_]+)_/i);
   const rawCity = cityMatch ? cityMatch[1] : 'Unknown';
   const fileCity = rawCity.charAt(0).toUpperCase() + rawCity.slice(1).toLowerCase();
   const week = weekMatch ? parseInt(weekMatch[1]) : 0;
