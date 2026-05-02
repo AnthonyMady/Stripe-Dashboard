@@ -996,12 +996,12 @@ function renderCityComparison() {
   const wowDeltas = {};
   let compLabel = '';
 
-  const cities = [...new Set(RAW.map(r => r.city))];
+  const allCities = [...new Set(RAW.map(r => r.city))];
 
   if (fMonth) {
     const [y, m] = fMonth.split('-').map(Number);
     const prevM = m === 1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`;
-    cities.forEach(c => {
+    allCities.forEach(c => {
       const curr = RAW.filter(r => r.city === c && r.revenueMonth === fMonth && succ(r)).reduce((s,r) => s+r.amount, 0);
       const prev = RAW.filter(r => r.city === c && r.revenueMonth === prevM && succ(r)).reduce((s,r) => s+r.amount, 0);
       wowDeltas[c] = { curr, prev };
@@ -1012,7 +1012,7 @@ function renderCityComparison() {
   } else {
     const currW = fWeek ? parseInt(fWeek) : isoWeekOf(new Date());
     const prevW = currW - 1;
-    cities.forEach(c => {
+    allCities.forEach(c => {
       const curr = RAW.filter(r => r.city === c && r.revenueWeek === currW && succ(r)).reduce((s,r) => s+r.amount, 0);
       const prev = RAW.filter(r => r.city === c && r.revenueWeek === prevW && succ(r)).reduce((s,r) => s+r.amount, 0);
       wowDeltas[c] = { curr, prev };
