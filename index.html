@@ -1165,6 +1165,7 @@ function renderFnbChart() {
     return;
   }
 
+  const baseScale = { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#444', font: { size: 10, family: 'JetBrains Mono, monospace' } } };
   const cats = ['Drinks', 'Food', 'Activity', 'Shop'];
   const cities = ['Brussels', 'Anvers'];
   const palette = { Brussels: '#c8a96e', Anvers: '#6e9ec8' };
