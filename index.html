@@ -491,6 +491,7 @@ function parseOdooLines(content) {
   const dateIdx    = col('Date');
   const orderIdx   = col('Order Ref');
   const posIdx     = col('Point of Sale');
+  const cityIdx    = col('City');
   const productIdx = col('Product');
   const catIdx     = col('Product Category');
   const qtyIdx     = col('Qty');
@@ -520,7 +521,7 @@ function parseOdooLines(content) {
       subtotalIncl,
       piId:        get(piIdx),
       orderTotal:  parseFloat(get(totalIdx)) || 0,
-      city:        get(posIdx).toLowerCase().includes('anvers') ? 'Anvers' : 'Brussels',
+      city:        get(cityIdx) || (get(posIdx).toLowerCase().includes('anvers') || get(posIdx).toLowerCase().includes('antwerp') ? 'Anvers' : 'Brussels'),
     });
   }
   return rows;
@@ -1190,34 +1191,33 @@ function renderFnbChart() {
   }
 
   const baseScale = { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#444', font: { size: 10, family: 'JetBrains Mono, monospace' } } };
+  const cityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc','#bc4a7f'];
   const cats = ['Drinks', 'Food', 'Activity', 'Shop'];
-  const cities = ['Brussels', 'Anvers'];
-  const palette = { Brussels: '#c8a96e', Anvers: '#6e9ec8' };
+  const cities = [...new Set(ODOO_ROWS.map(r => r.city).filter(Boolean))].sort();
 
   const totals = {};
   cities.forEach(c => { totals[c] = {}; cats.forEach(k => { totals[c][k] = 0; }); });
 
   ODOO_ROWS.forEach(r => {
     const cat = cats.find(k => r.category && r.category.toLowerCase().includes(k.toLowerCase()));
-    const city = (r.city === 'Anvers') ? 'Anvers' : 'Brussels';
-    if (cat && r.subtotalIncl > 0) totals[city][cat] += r.subtotalIncl;
+    if (cat && r.subtotalIncl > 0 && totals[r.city]) totals[r.city][cat] += r.subtotalIncl;
   });
 
   canvas._chart = new Chart(canvas, {
     type: 'bar',
     data: {
       labels: cats,
-      datasets: cities.map(c => ({
+      datasets: cities.map((c, i) => ({
         label: c,
         data: cats.map(k => Math.round(totals[c][k])),
-        backgroundColor: palette[c] + 'cc',
+        backgroundColor: cityColors[i % cityColors.length] + 'cc',
         borderRadius: 4,
         borderSkipped: false
       }))
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#c8a96e', font: { size: 11 } } } },
+      plugins: { legend: { labels: { color: '#888', font: { size: 10 }, boxWidth: 10 } } },
       scales: {
         x: { ...baseScale },
         y: { ...baseScale, beginAtZero: true, ticks: { ...baseScale.ticks, callback: v => '€' + (v >= 1000 ? Math.round(v/1000) + 'k' : v) } }
