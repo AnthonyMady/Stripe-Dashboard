@@ -567,12 +567,11 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
     const dayOfWeek = isNaN(dateObj) ? 0 : dateObj.getDay();
     const month = isNaN(dateObj) ? '' : dateStr.substring(0, 7);
     const pmdType = (obj['Payment Method Type'] || '').trim().toLowerCase();
-    const csvPayType = (obj['Payment Type'] || '').trim().toLowerCase();
-    const inStoreTypes = ['card_present', 'bancontact', 'interac_present'];
-    const payType = csvPayType === 'in-store' ? 'in-store'
-      : csvPayType === 'online' ? 'online'
-      : inStoreTypes.includes(pmdType) ? 'in-store'
-      : 'online';
+    const readerLabel = (obj['Reader Label'] || '').trim();
+    // in-store = terminal reader recorded OR card_present type
+    // always re-derive from raw fields so old CSVs with wrong bancontact classification get corrected
+    const payType = (readerLabel || pmdType === 'card_present' || pmdType === 'interac_present')
+      ? 'in-store' : 'online';
     const piId = (obj['payment_intent_id'] || '').trim();
     const consumedDateStr = (obj['consumed_date'] || '').trim();
     const playerAmount = (obj['player_amount'] || '').trim();
@@ -598,11 +597,11 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
       revenueWeek = Math.ceil((((rd - ryearStart) / 86400000) + 1) / 7);
     }
 
-    const readerLabel = (obj['Reader Label'] || '').toLowerCase();
+    const readerLabelLower = (obj['Reader Label'] || '').toLowerCase();
     let city = fileCity;
     if (isBelgium) {
       if (payType === 'in-store') {
-        city = (readerLabel.includes('antwerp') || readerLabel.includes('anvers')) ? 'Anvers' : 'Brussels';
+        city = (readerLabelLower.includes('antwerp') || readerLabelLower.includes('anvers')) ? 'Anvers' : 'Brussels';
       } else {
         const locMeta = (obj['location (metadata)'] || '').trim().toLowerCase();
         if (locMeta === 'antwerp' || locMeta === 'anvers') {
