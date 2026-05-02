@@ -339,16 +339,10 @@ main { padding: 20px 28px; max-width: 1440px; margin: 0 auto; }
         <div style="position:relative;height:180px"><canvas id="chart-city"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-title">
-          Transaction heatmap
-          <span style="font-size:9px;color:var(--muted)">amount by day × hour</span>
+        <div class="chart-title">F&amp;B breakdown
+          <span class="chart-title-badge" id="fnb-badge">Odoo</span>
         </div>
-        <div class="heatmap-grid" id="heatmap"></div>
-        <div class="heatmap-legend">
-          <span>Low</span>
-          <div class="heatmap-legend-bar" id="heatmap-legend"></div>
-          <span>High</span>
-        </div>
+        <div style="position:relative;height:180px"><canvas id="chart-fnb"></canvas></div>
       </div>
     </div>
 
@@ -385,6 +379,7 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 
 let tokenClient, accessToken;
 let RAW = [], filtered = [];
+let ODOO_ROWS = [];
 let charts = {};
 let activeCity = '';
 let compSortCol = 'revenue', compSortAsc = false;
@@ -416,12 +411,14 @@ async function loadData() {
 
     if (!stripeFiles.length) throw new Error('No Stripe CSV files found in folder or subfolders');
 
-    setLoading('Loading Odoo branch mapping…');
+    setLoading('Loading Odoo data…');
     const odooMap = {};
     let odooLoaded = false;
+    ODOO_ROWS = [];
     for (const file of odooFiles) {
       const content = await driveDownload(file.id);
       parseOdooMapping(content, odooMap);
+      ODOO_ROWS = ODOO_ROWS.concat(parseOdooLines(content));
       odooLoaded = true;
     }
 
@@ -481,6 +478,52 @@ function parseOdooMapping(content, odooMap) {
       odooMap[piId] = 'Anvers';
     }
   }
+}
+
+// ── ODOO LINES PARSER ────────────────────────────────
+function parseOdooLines(content) {
+  const lines = content.trim().split('\n');
+  if (lines.length < 2) return [];
+  const delim = lines[0].includes(';') ? ';' : ',';
+  const headers = parseLine(lines[0], delim).map(h => h.trim());
+  const col = name => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
+
+  const dateIdx    = col('Date');
+  const orderIdx   = col('Order Ref');
+  const posIdx     = col('Point of Sale');
+  const productIdx = col('Product');
+  const catIdx     = col('Product Category');
+  const qtyIdx     = col('Qty');
+  const priceIdx   = col('Unit Price');
+  const discIdx    = col('Discount %');
+  const subIdx     = col('Price Subtotal');
+  const subInclIdx = col('Price Subtotal Incl. Tax');
+  const piIdx      = col('Payment Transaction ID');
+  const totalIdx   = col('Order Total');
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseLine(lines[i], delim);
+    if (vals.length < 3) continue;
+    const get = idx => idx >= 0 ? (vals[idx] || '').trim() : '';
+    const subtotalIncl = parseFloat(get(subInclIdx)) || 0;
+    rows.push({
+      date:        get(dateIdx),
+      orderRef:    get(orderIdx),
+      pos:         get(posIdx),
+      product:     get(productIdx).replace(/^[°*]\s*/, '').trim(),
+      category:    get(catIdx),
+      qty:         parseFloat(get(qtyIdx)) || 0,
+      unitPrice:   parseFloat(get(priceIdx)) || 0,
+      discount:    parseFloat(get(discIdx)) || 0,
+      subtotal:    parseFloat(get(subIdx)) || 0,
+      subtotalIncl,
+      piId:        get(piIdx),
+      orderTotal:  parseFloat(get(totalIdx)) || 0,
+      city:        get(posIdx).toLowerCase().includes('anvers') ? 'Anvers' : 'Brussels',
+    });
+  }
+  return rows;
 }
 
 // ── DRIVE ─────────────────────────────────────────────
@@ -670,7 +713,7 @@ function renderAll() {
   renderKPIs(succ);
   renderCityStrips(succ);
   renderCharts(succ);
-  renderHeatmap(succ);
+  renderFnbChart();
   renderInsights(succ);
   renderCityComparison();
   if (activeCity) renderDrilldown(activeCity);
@@ -876,14 +919,13 @@ function renderInsights(succ) {
   const [y, m] = targetMonth.split('-').map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
 
-  // Forecast (only for current month)
+  // Forecast card
   let forecastHTML = '';
   if (targetMonth === currentMonth) {
     const daysElapsed = now.getDate();
     const monthSucc = succ.filter(r => r.revenueMonth === targetMonth);
     const monthRev = monthSucc.reduce((s,r) => s+r.amount, 0);
-    const dailyPace = daysElapsed > 0 ? monthRev / daysElapsed : 0;
-    const projected = dailyPace * daysInMonth;
+    const projected = daysElapsed > 0 ? monthRev / daysElapsed * daysInMonth : 0;
     const pct = Math.round(daysElapsed / daysInMonth * 100);
     forecastHTML = `
       <div class="insight-card">
@@ -904,30 +946,35 @@ function renderInsights(succ) {
       </div>`;
   }
 
-  // Best week
-  const weekRevs = {};
-  succ.forEach(r => { weekRevs[r.revenueWeek] = (weekRevs[r.revenueWeek] || 0) + r.amount; });
-  const sortedWeeks = Object.entries(weekRevs).sort((a,b) => b[1]-a[1]);
-  const bestWeek = sortedWeeks[0];
-  const bestWeekHTML = `
+  // F&B Revenue (Drinks + Food, non-zero lines only)
+  const fnbCats = ['Drinks', 'Food'];
+  const fnbRows = ODOO_ROWS.filter(r => fnbCats.includes(r.category) && r.subtotalIncl > 0);
+  const fnbRevenue = fnbRows.reduce((s,r) => s + r.subtotalIncl, 0);
+  const fnbOrders = new Set(fnbRows.map(r => r.orderRef)).size;
+  const drinksRev = fnbRows.filter(r => r.category === 'Drinks').reduce((s,r) => s + r.subtotalIncl, 0);
+  const foodRev   = fnbRows.filter(r => r.category === 'Food').reduce((s,r) => s + r.subtotalIncl, 0);
+  const fnbHTML = `
     <div class="insight-card">
-      <div class="insight-label">Peak week</div>
-      <div class="insight-val">${bestWeek ? 'W' + bestWeek[0] : '—'}</div>
-      <div class="insight-sub">${bestWeek ? fmtCur(bestWeek[1]) + ' revenue' : 'No data'}</div>
+      <div class="insight-label">F&amp;B Revenue <span style="color:var(--muted);font-weight:400">· Odoo</span></div>
+      <div class="insight-val accent-green">${fmtCur(fnbRevenue)}</div>
+      <div class="insight-sub">${fmtCur(drinksRev)} drinks · ${fmtCur(foodRev)} food · ${fnbOrders} orders</div>
     </div>`;
 
-  // YTD total (always unfiltered by time)
-  const ytdSucc = RAW.filter(r => r.status === 'paid' || r.status === 'succeeded');
-  const ytdRev = ytdSucc.reduce((s,r) => s+r.amount, 0);
-  const ytdTips = ytdSucc.reduce((s,r) => s+r.tip_amount, 0);
-  const ytdHTML = `
+  // Avg F&B spend per order that had F&B
+  const avgFnb = fnbOrders > 0 ? fnbRevenue / fnbOrders : 0;
+  const topProduct = fnbRows.length > 0 ? (() => {
+    const byProd = {};
+    fnbRows.forEach(r => { byProd[r.product] = (byProd[r.product] || 0) + r.subtotalIncl; });
+    return Object.entries(byProd).sort((a,b) => b[1]-a[1])[0];
+  })() : null;
+  const avgFnbHTML = `
     <div class="insight-card">
-      <div class="insight-label">YTD Revenue</div>
-      <div class="insight-val accent-gold">${fmtCur(ytdRev)}</div>
-      <div class="insight-sub">${fmtCur(ytdTips)} in tips · ${ytdSucc.length.toLocaleString()} tx total</div>
+      <div class="insight-label">Avg F&amp;B per order <span style="color:var(--muted);font-weight:400">· Odoo</span></div>
+      <div class="insight-val accent-green">${fmtCur(avgFnb)}</div>
+      <div class="insight-sub">Top: ${topProduct ? topProduct[0] + ' (' + fmtCur(topProduct[1]) + ')' : '—'}</div>
     </div>`;
 
-  document.getElementById('insights-row').innerHTML = forecastHTML + bestWeekHTML + ytdHTML;
+  document.getElementById('insights-row').innerHTML = forecastHTML + fnbHTML + avgFnbHTML;
 }
 
 // ── CITY COMPARISON TABLE ─────────────────────────────
@@ -1108,32 +1155,50 @@ function renderCharts(succ) {
   });
 }
 
-// ── HEATMAP ───────────────────────────────────────────
-function renderHeatmap(succ) {
-  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const hours = [0,4,8,10,12,14,16,18,20,22];
-  const hourLabels = ['12am','4am','8am','10am','12pm','2pm','4pm','6pm','8pm','10pm'];
-  const grid = {};
-  days.forEach((d,di) => hours.forEach((h,hi) => { grid[`${di}_${hi}`] = 0; }));
-  succ.forEach(r => {
-    const hi = hours.findIndex((h,i) => r.hour >= h && r.hour < (hours[i+1] ?? 24));
-    if (hi >= 0) grid[`${r.dayOfWeek}_${hi}`] += r.amount;
-  });
-  const maxVal = Math.max(...Object.values(grid), 1);
-  const stops = ['#1a1a1f','#2a2218','#3d3020','#5a4428','#7a5c30','#9a7040','#c8a96e'];
-  const getCol = v => stops[Math.min(Math.floor(v/maxVal*(stops.length-1)), stops.length-1)];
+// ── F&B CHART ─────────────────────────────────────────
+function renderFnbChart() {
+  const canvas = document.getElementById('chart-fnb');
+  if (!canvas) return;
+  if (canvas._chart) { canvas._chart.destroy(); canvas._chart = null; }
+  if (!ODOO_ROWS.length) {
+    canvas.parentElement.innerHTML = '<p style="color:#888;text-align:center;padding:40px 0;font-size:13px;">No F&B data — Odoo CSV not loaded</p>';
+    return;
+  }
 
-  let html = '<div></div>';
-  days.forEach(d => { html += `<div class="heatmap-header">${d}</div>`; });
-  hours.forEach((h,hi) => {
-    html += `<div class="heatmap-label">${hourLabels[hi]}</div>`;
-    days.forEach((d,di) => {
-      const val = grid[`${di}_${hi}`] || 0;
-      html += `<div class="heatmap-cell" style="background:${getCol(val)}" title="${d} ${hourLabels[hi]}: ${fmtCur(val)}"></div>`;
-    });
+  const cats = ['Drinks', 'Food', 'Activity', 'Shop'];
+  const cities = ['Brussels', 'Anvers'];
+  const palette = { Brussels: '#c8a96e', Anvers: '#6e9ec8' };
+
+  const totals = {};
+  cities.forEach(c => { totals[c] = {}; cats.forEach(k => { totals[c][k] = 0; }); });
+
+  ODOO_ROWS.forEach(r => {
+    const cat = cats.find(k => r.category && r.category.toLowerCase().includes(k.toLowerCase()));
+    const city = (r.city === 'Anvers') ? 'Anvers' : 'Brussels';
+    if (cat && r.subtotalIncl > 0) totals[city][cat] += r.subtotalIncl;
   });
-  document.getElementById('heatmap').innerHTML = html;
-  document.getElementById('heatmap-legend').innerHTML = stops.map(c => `<div class="heatmap-legend-stop" style="background:${c}"></div>`).join('');
+
+  canvas._chart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: cats,
+      datasets: cities.map(c => ({
+        label: c,
+        data: cats.map(k => Math.round(totals[c][k])),
+        backgroundColor: palette[c] + 'cc',
+        borderRadius: 4,
+        borderSkipped: false
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#c8a96e', font: { size: 11 } } } },
+      scales: {
+        x: { ...baseScale },
+        y: { ...baseScale, beginAtZero: true, ticks: { ...baseScale.ticks, callback: v => '€' + (v >= 1000 ? Math.round(v/1000) + 'k' : v) } }
+      }
+    }
+  });
 }
 
 // ── DELTA HELPERS ─────────────────────────────────────
