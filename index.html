@@ -34,7 +34,6 @@
   --orange: #c47a4a;
   --purple: #8a6ec4;
   --r: 8px;
-  --r-lg: 12px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -56,31 +55,19 @@ body { font-family: 'Bricolage Grotesque', sans-serif; background: var(--bg); co
 }
 .auth-eyebrow { font-size: 10px; letter-spacing: 0.25em; color: var(--muted2); text-transform: uppercase; font-weight: 500; font-family: 'JetBrains Mono', monospace; }
 .auth-logo { display: flex; align-items: center; gap: 12px; }
-.auth-logo-mark {
-  width: 42px; height: 42px; border: 1px solid var(--b3); border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-}
+.auth-logo-mark { width: 42px; height: 42px; border: 1px solid var(--b3); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
 .auth-logo-mark svg { width: 20px; height: 20px; }
 .auth-wordmark { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; }
 .auth-title { font-size: 13px; color: var(--muted2); font-family: 'JetBrains Mono', monospace; text-align: center; max-width: 320px; line-height: 1.8; }
 .auth-title span { color: var(--gold); }
-.auth-btn {
-  display: flex; align-items: center; gap: 10px;
-  background: var(--gold); color: #0a0a0b;
-  border: none; border-radius: var(--r); padding: 13px 28px;
-  font-family: 'Bricolage Grotesque', sans-serif; font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: all 0.2s; letter-spacing: 0.02em;
-}
+.auth-btn { display: flex; align-items: center; gap: 10px; background: var(--gold); color: #0a0a0b; border: none; border-radius: var(--r); padding: 13px 28px; font-family: 'Bricolage Grotesque', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; letter-spacing: 0.02em; }
 .auth-btn:hover { background: var(--gold2); transform: translateY(-1px); }
 .auth-btn svg { width: 16px; height: 16px; }
 .auth-footnote { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
 #auth-error { color: var(--red); font-size: 11px; display: none; font-family: 'JetBrains Mono', monospace; }
 
 /* ── LOADING ── */
-#loading-screen {
-  display: none; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 100vh; gap: 16px;
-}
+#loading-screen { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 16px; }
 .spinner { width: 24px; height: 24px; border: 1.5px solid var(--b2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-text { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.06em; }
@@ -89,12 +76,7 @@ body { font-family: 'Bricolage Grotesque', sans-serif; background: var(--bg); co
 #dashboard { display: none; min-height: 100vh; }
 
 /* ── HEADER ── */
-header {
-  border-bottom: 1px solid var(--b1); padding: 0 28px; height: 52px;
-  display: flex; align-items: center; justify-content: space-between;
-  position: sticky; top: 0; background: rgba(8,8,9,0.94);
-  backdrop-filter: blur(16px); z-index: 100;
-}
+header { border-bottom: 1px solid var(--b1); padding: 0 28px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: rgba(8,8,9,0.94); backdrop-filter: blur(16px); z-index: 100; }
 .hdr-left { display: flex; align-items: center; gap: 14px; }
 .hdr-mark { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); }
 .hdr-title { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -102,28 +84,14 @@ header {
 .hdr-ctx { font-size: 11px; color: var(--muted2); font-family: 'JetBrains Mono', monospace; }
 .hdr-right { display: flex; align-items: center; gap: 10px; }
 .hdr-week { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
-.hdr-btn {
-  background: transparent; border: 1px solid var(--b2); color: var(--muted2);
-  border-radius: 6px; padding: 5px 12px; font-size: 10px;
-  font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.15s;
-  letter-spacing: 0.08em; text-transform: uppercase;
-}
+.hdr-btn { background: transparent; border: 1px solid var(--b2); color: var(--muted2); border-radius: 6px; padding: 5px 12px; font-size: 10px; font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.15s; letter-spacing: 0.08em; text-transform: uppercase; }
 .hdr-btn:hover { border-color: var(--b3); color: var(--text); }
 
 /* ── FILTERS ── */
-.filters {
-  padding: 10px 28px; display: flex; gap: 6px; flex-wrap: wrap;
-  border-bottom: 1px solid var(--b1); background: var(--s1); align-items: center;
-}
-.filters select, .filters input {
-  background: var(--s2); border: 1px solid var(--b1); color: var(--text);
-  border-radius: 6px; padding: 6px 10px; font-size: 11px;
-  font-family: 'JetBrains Mono', monospace; outline: none;
-  transition: border-color 0.15s; -webkit-appearance: none; cursor: pointer;
-}
+.filters { padding: 10px 28px; display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--b1); background: var(--s1); align-items: center; }
+.filters select, .filters input { background: var(--s2); border: 1px solid var(--b1); color: var(--text); border-radius: 6px; padding: 6px 10px; font-size: 11px; font-family: 'JetBrains Mono', monospace; outline: none; transition: border-color 0.15s; -webkit-appearance: none; cursor: pointer; }
 .filters select:focus, .filters input:focus { border-color: rgba(200,169,110,0.4); }
 .filters select option { background: var(--s2); }
-.filters input::placeholder { color: var(--muted); }
 .filter-label { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; margin-left: 6px; }
 .filter-sep { width: 1px; height: 16px; background: var(--b2); margin: 0 4px; }
 
@@ -132,11 +100,7 @@ main { padding: 20px 28px; max-width: 1440px; margin: 0 auto; }
 
 /* ── KPI ROW ── */
 .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 8px; }
-.kpi {
-  background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r);
-  padding: 16px 18px; position: relative; overflow: hidden; cursor: default;
-  transition: border-color 0.2s;
-}
+.kpi { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r); padding: 16px 18px; position: relative; overflow: hidden; cursor: default; transition: border-color 0.2s; }
 .kpi:hover { border-color: var(--b2); }
 .kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--b2), transparent); }
 .kpi-label { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
@@ -153,11 +117,8 @@ main { padding: 20px 28px; max-width: 1440px; margin: 0 auto; }
 .accent-purple { color: var(--purple); }
 
 /* ── CITY STRIPS ── */
-.city-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 16px; }
-.city-card {
-  background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r);
-  padding: 12px 14px; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden;
-}
+.city-row { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; margin-bottom: 8px; }
+.city-card { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r); padding: 12px 14px; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden; }
 .city-card:hover { border-color: var(--b2); background: var(--s2); }
 .city-card.active { border-color: rgba(200,169,110,0.4); background: var(--s2); }
 .city-card.active::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--gold); }
@@ -170,10 +131,7 @@ main { padding: 20px 28px; max-width: 1440px; margin: 0 auto; }
 /* ── CHART GRID ── */
 .chart-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
 .chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-.chart-card {
-  background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r);
-  padding: 18px 20px;
-}
+.chart-card { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r); padding: 18px 20px; }
 .chart-title { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
 .chart-title-badge { font-size: 9px; color: var(--gold); background: var(--gold-dim); border: 1px solid rgba(200,169,110,0.2); border-radius: 4px; padding: 2px 6px; }
 
@@ -181,62 +139,72 @@ main { padding: 20px 28px; max-width: 1440px; margin: 0 auto; }
 .heatmap-grid { display: grid; grid-template-columns: 36px repeat(7, 1fr); gap: 3px; }
 .heatmap-header { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; text-align: center; padding: 2px 0; }
 .heatmap-label { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; text-align: right; padding: 2px 4px 2px 0; line-height: 20px; }
-.heatmap-cell {
-  height: 20px; border-radius: 3px; background: var(--s2);
-  position: relative; cursor: default; transition: opacity 0.15s;
-}
+.heatmap-cell { height: 20px; border-radius: 3px; background: var(--s2); cursor: default; transition: opacity 0.15s; }
 .heatmap-cell:hover { opacity: 0.8; }
 .heatmap-legend { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
 .heatmap-legend-bar { display: flex; gap: 2px; }
 .heatmap-legend-stop { width: 16px; height: 8px; border-radius: 1px; }
 
-/* ── TABLE ── */
-.table-card { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r); overflow: hidden; }
-.table-hdr { padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--b1); }
-.table-hdr-title { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; }
-.table-hdr-count { font-size: 11px; color: var(--muted2); font-family: 'JetBrains Mono', monospace; }
-.table-wrap { overflow-x: auto; max-height: 420px; overflow-y: auto; }
-table { width: 100%; border-collapse: collapse; }
-th {
-  position: sticky; top: 0; z-index: 2;
-  padding: 8px 12px; font-size: 9px; font-family: 'JetBrains Mono', monospace;
-  letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
-  border-bottom: 1px solid var(--b1); background: var(--s2);
-  white-space: nowrap; cursor: pointer; user-select: none; text-align: left;
-}
-th:hover { color: var(--muted3); }
-td { padding: 8px 12px; border-bottom: 1px solid var(--b1); font-size: 12px; vertical-align: middle; }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: rgba(255,255,255,0.012); }
-.mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
-.table-foot { padding: 8px 18px; font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; border-top: 1px solid var(--b1); background: var(--s2); display: flex; justify-content: space-between; }
+/* ── DRILLDOWN ── */
+.drilldown-panel { display: none; background: var(--s1); border: 1px solid rgba(200,169,110,0.2); border-radius: var(--r); padding: 20px; margin-bottom: 8px; }
+.drilldown-panel.open { display: block; animation: fadeIn 0.18s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.drilldown-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+.drilldown-city-name { font-size: 14px; font-weight: 700; letter-spacing: -0.02em; }
+.drilldown-city-sub { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 3px; }
+.drilldown-close { background: transparent; border: 1px solid var(--b2); color: var(--muted2); border-radius: 5px; padding: 4px 10px; font-size: 10px; font-family: 'JetBrains Mono', monospace; cursor: pointer; letter-spacing: 0.06em; transition: all 0.15s; flex-shrink: 0; }
+.drilldown-close:hover { border-color: var(--b3); color: var(--text); }
+.drilldown-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.dd-kpi { background: var(--s2); border-radius: 6px; padding: 12px 14px; }
+.dd-kpi-label { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+.dd-kpi-val { font-size: 17px; font-weight: 700; letter-spacing: -0.03em; }
+.dd-kpi-sub { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 4px; }
 
-/* ── BADGES ── */
-.badge {
-  display: inline-flex; align-items: center; font-size: 9px;
-  font-family: 'JetBrains Mono', monospace; padding: 2px 7px;
-  border-radius: 4px; font-weight: 500; letter-spacing: 0.04em; white-space: nowrap;
-}
-.b-success { background: var(--green-dim); color: #6dcc96; border: 1px solid rgba(74,158,110,0.2); }
-.b-fail { background: var(--red-dim); color: #e07070; border: 1px solid rgba(196,80,79,0.2); }
-.b-pending { background: rgba(200,169,110,0.1); color: var(--gold); border: 1px solid rgba(200,169,110,0.2); }
+/* ── INSIGHTS ROW ── */
+.insights-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+.insight-card { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r); padding: 18px 20px; }
+.insight-label { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; }
+.insight-val { font-size: 22px; font-weight: 700; letter-spacing: -0.04em; }
+.insight-sub { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 6px; }
+.insight-progress { margin-top: 12px; height: 2px; background: var(--b1); border-radius: 1px; overflow: hidden; }
+.insight-progress-fill { height: 100%; background: var(--gold); border-radius: 1px; }
+
+/* ── CITY COMPARISON ── */
+.comparison-card { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r); overflow: hidden; }
+.comparison-header { padding: 12px 18px; border-bottom: 1px solid var(--b1); display: flex; align-items: center; justify-content: space-between; }
+.comparison-title { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; }
+.comparison-period { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.comp-table { width: 100%; border-collapse: collapse; }
+.comp-table th { padding: 8px 16px; font-size: 9px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--b1); background: var(--s2); text-align: left; cursor: pointer; user-select: none; white-space: nowrap; }
+.comp-table th:hover { color: var(--muted2); }
+.comp-table th.sorted { color: var(--gold); }
+.comp-table td { padding: 10px 16px; border-bottom: 1px solid var(--b1); font-size: 12px; vertical-align: middle; white-space: nowrap; }
+.comp-table tr:last-child td { border-bottom: none; }
+.comp-table tr:hover td { background: rgba(255,255,255,0.012); }
+.comp-rank { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; font-size: 9px; font-family: 'JetBrains Mono', monospace; background: var(--s3); color: var(--muted); }
+.rank-1 { background: rgba(200,169,110,0.15); color: var(--gold); }
+.rank-2 { background: rgba(220,220,220,0.07); color: var(--muted3); }
+.rank-3 { background: rgba(200,120,50,0.08); color: var(--orange); }
+.delta-up { color: var(--green); font-size: 10px; font-family: 'JetBrains Mono', monospace; }
+.delta-down { color: var(--red); font-size: 10px; font-family: 'JetBrains Mono', monospace; }
+.delta-neutral { color: var(--muted); font-size: 10px; font-family: 'JetBrains Mono', monospace; }
+
+/* ── BADGES & MISC ── */
+.badge { display: inline-flex; align-items: center; font-size: 9px; font-family: 'JetBrains Mono', monospace; padding: 2px 7px; border-radius: 4px; font-weight: 500; letter-spacing: 0.04em; white-space: nowrap; }
 .b-terminal { background: var(--blue-dim); color: #7aabdb; border: 1px solid rgba(74,127,196,0.2); }
 .b-online { background: rgba(138,110,196,0.1); color: #b09ee0; border: 1px solid rgba(138,110,196,0.2); }
-.tip-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--gold); }
-.tip-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); }
-
-/* ── DONUT LEGEND ── */
 .donut-wrap { display: flex; align-items: center; gap: 20px; }
 .donut-canvas-wrap { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
 .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
 .donut-center-val { font-size: 18px; font-weight: 700; letter-spacing: -0.04em; }
 .donut-center-lbl { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
 .donut-legend { display: flex; flex-direction: column; gap: 7px; flex: 1; }
-.donut-item { display: flex; align-items: center; gap: 7px; font-size: 11px; }
+.donut-item { display: flex; align-items: center; gap: 7px; }
 .donut-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
 .donut-name { color: var(--muted3); flex: 1; font-size: 10px; }
 .donut-pct { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted2); }
 .donut-amt { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+.mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
 </style>
 </head>
 <body>
@@ -253,7 +221,7 @@ tr:hover td { background: rgba(255,255,255,0.012); }
     <div class="auth-wordmark">WoodCutter</div>
   </div>
   <div class="auth-title">
-    Revenue intelligence across<br>all <span>7 locations</span> — real-time.
+    Revenue intelligence across<br>all <span>8 locations</span> — real-time.
   </div>
   <button class="auth-btn" onclick="signIn()">
     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
@@ -295,7 +263,6 @@ tr:hover td { background: rgba(255,255,255,0.012); }
       <option value="paid">Paid</option>
       <option value="failed">Failed</option>
       <option value="refunded">Refunded</option>
-      <option value="canceled">Canceled</option>
     </select>
     <select id="f-type" onchange="applyFilters()">
       <option value="">All types</option>
@@ -316,6 +283,18 @@ tr:hover td { background: rgba(255,255,255,0.012); }
     <!-- CITY STRIPS -->
     <div class="city-row" id="city-row"></div>
 
+    <!-- DRILLDOWN PANEL -->
+    <div class="drilldown-panel" id="drilldown-panel">
+      <div class="drilldown-header">
+        <div>
+          <div class="drilldown-city-name" id="dd-city-name"></div>
+          <div class="drilldown-city-sub" id="dd-city-sub"></div>
+        </div>
+        <button class="drilldown-close" onclick="closeDrilldown()">✕ Close</button>
+      </div>
+      <div class="drilldown-kpis" id="dd-kpis"></div>
+    </div>
+
     <!-- CHARTS ROW 1 -->
     <div class="chart-grid">
       <div class="chart-card">
@@ -323,13 +302,13 @@ tr:hover td { background: rgba(255,255,255,0.012); }
           Revenue over time
           <span class="chart-title-badge" id="trend-badge">weekly</span>
         </div>
-        <div style="position:relative;height:180px"><canvas id="chart-trend" role="img" aria-label="Revenue trend over time">Revenue trend chart</canvas></div>
+        <div style="position:relative;height:180px"><canvas id="chart-trend"></canvas></div>
       </div>
       <div class="chart-card">
         <div class="chart-title">Payment type</div>
         <div class="donut-wrap">
           <div class="donut-canvas-wrap">
-            <canvas id="chart-type" role="img" aria-label="Payment type breakdown">Payment type donut chart</canvas>
+            <canvas id="chart-type"></canvas>
             <div class="donut-center">
               <div class="donut-center-val" id="type-center-val">—</div>
               <div class="donut-center-lbl">total</div>
@@ -342,7 +321,7 @@ tr:hover td { background: rgba(255,255,255,0.012); }
         <div class="chart-title">Tip distribution</div>
         <div class="donut-wrap">
           <div class="donut-canvas-wrap">
-            <canvas id="chart-tip" role="img" aria-label="Tip distribution">Tip donut chart</canvas>
+            <canvas id="chart-tip"></canvas>
             <div class="donut-center">
               <div class="donut-center-val accent-gold" id="tip-center-val">—</div>
               <div class="donut-center-lbl">tip rate</div>
@@ -357,7 +336,7 @@ tr:hover td { background: rgba(255,255,255,0.012); }
     <div class="chart-grid-2">
       <div class="chart-card">
         <div class="chart-title">Revenue by city</div>
-        <div style="position:relative;height:180px"><canvas id="chart-city" role="img" aria-label="Revenue by city bar chart">Revenue by city</canvas></div>
+        <div style="position:relative;height:180px"><canvas id="chart-city"></canvas></div>
       </div>
       <div class="chart-card">
         <div class="chart-title">
@@ -373,33 +352,28 @@ tr:hover td { background: rgba(255,255,255,0.012); }
       </div>
     </div>
 
-    <!-- TABLE -->
-    <div class="table-card">
-      <div class="table-hdr">
-        <div class="table-hdr-title">Transactions</div>
-        <div class="table-hdr-count" id="table-count"></div>
+    <!-- INSIGHTS ROW -->
+    <div class="insights-row" id="insights-row"></div>
+
+    <!-- CITY COMPARISON -->
+    <div class="comparison-card">
+      <div class="comparison-header">
+        <div class="comparison-title">City breakdown</div>
+        <div class="comparison-period" id="comp-period"></div>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th onclick="sortBy('consumedDate')">Consumed</th>
-            <th onclick="sortBy('date')">Payment Date</th>
-            <th onclick="sortBy('city')">City</th>
-            <th onclick="sortBy('playerAmount')">Players</th>
-            <th onclick="sortBy('amount')">Amount</th>
-            <th onclick="sortBy('tip_amount')">Tip</th>
-            <th onclick="sortBy('total_amount')">Total</th>
-            <th>Status</th>
-            <th>Type</th>
-            <th>Payment Intent</th>
-          </tr></thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
-      <div class="table-foot">
-        <span id="tfoot-left"></span>
-        <span id="tfoot-right"></span>
-      </div>
+      <table class="comp-table">
+        <thead><tr>
+          <th onclick="compSort('rank')" id="cth-rank">#</th>
+          <th onclick="compSort('city')" id="cth-city">City</th>
+          <th onclick="compSort('revenue')" id="cth-revenue">Revenue ↓</th>
+          <th onclick="compSort('txns')" id="cth-txns">Txns</th>
+          <th onclick="compSort('avg')" id="cth-avg">Avg tx</th>
+          <th onclick="compSort('tipRate')" id="cth-tipRate">Tip rate</th>
+          <th onclick="compSort('instore')" id="cth-instore">In-store</th>
+          <th onclick="compSort('wow')" id="cth-wow">WoW Δ</th>
+        </tr></thead>
+        <tbody id="comp-tbody"></tbody>
+      </table>
     </div>
   </main>
 </div>
@@ -411,9 +385,9 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 
 let tokenClient, accessToken;
 let RAW = [], filtered = [];
-let sortCol = 'date', sortAsc = false;
 let charts = {};
 let activeCity = '';
+let compSortCol = 'revenue', compSortAsc = false;
 
 // ── AUTH ──────────────────────────────────────────────
 function signIn() {
@@ -456,11 +430,10 @@ async function loadData() {
     for (const file of stripeFiles) {
       setLoading(`Parsing ${file.name}…`);
       const content = await driveDownload(file.id);
-      const rows = parseCSV(content, file.name, odooMap, odooLoaded);
-      RAW = RAW.concat(rows);
+      RAW = RAW.concat(parseCSV(content, file.name, odooMap, odooLoaded));
     }
 
-    const weeks = [...new Set(RAW.map(r => r.week))].sort();
+    const weeks = [...new Set(RAW.map(r => r.revenueWeek))].sort();
     const latestWeek = weeks[weeks.length - 1];
     document.getElementById('hdr-ctx').textContent = `${RAW.length.toLocaleString()} transactions · ${stripeFiles.length} files`;
     document.getElementById('hdr-week').textContent = `W${latestWeek} · ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
@@ -482,8 +455,7 @@ async function getAllFiles(folderId) {
   const foldersRes = await driveApi(`files?q='${folderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id,name)&supportsAllDrives=true&includeItemsFromAllDrives=true`);
   if (foldersRes.files) {
     for (const folder of foldersRes.files) {
-      const subFiles = await getAllFiles(folder.id);
-      results.push(...subFiles);
+      results.push(...await getAllFiles(folder.id));
     }
   }
   return results;
@@ -530,7 +502,6 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
   const headers = parseLine(lines[0], delim).map(h => h.trim());
   const rows = [];
 
-  // Extract city: stripe_2026_Berlin_YTD.csv (new) or stripe_W18_2026_stripe_Berlin_April2026.csv (legacy)
   const weekMatch = filename.match(/stripe_W(\d+)/i);
   const cityMatch = filename.match(/stripe_\d{4}_([^_]+)_YTD/i) || filename.match(/stripe_W\d+_\d+_stripe_([^_]+)_/i);
   const rawCity = cityMatch ? cityMatch[1] : 'Unknown';
@@ -563,7 +534,6 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
     const playerAmount = (obj['player_amount'] || '').trim();
     const paymentDateStr = (obj['payment_date'] || '').trim();
 
-    // Calculate week from actual transaction date
     let txWeek = week;
     if (!isNaN(dateObj)) {
       const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()));
@@ -572,7 +542,6 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
       txWeek = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
     }
 
-    // Revenue date = consumed_date when available (accrual accounting), else payment date
     const consumedDateObj = consumedDateStr ? new Date(consumedDateStr) : null;
     const hasConsumedDate = consumedDateObj && !isNaN(consumedDateObj);
     const revDateObj = hasConsumedDate ? consumedDateObj : dateObj;
@@ -585,9 +554,6 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
       revenueWeek = Math.ceil((((rd - ryearStart) / 86400000) + 1) / 7);
     }
 
-    // City detection for Belgium account:
-    // - In-store: use Reader Label (e.g. "Antwerp Card Reader" → Anvers)
-    // - Online: use location metadata, fall back to Odoo mapping, default Brussels
     const readerLabel = (obj['Reader Label'] || '').toLowerCase();
     let city = fileCity;
     if (isBelgium) {
@@ -605,35 +571,31 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
       }
     }
 
-    // Tips — always use value from Stripe CSV, no zeroing
     const tip = parseFloat((obj['tip_amount'] || '0').replace(',', '.')) || 0;
-    const total = amount + tip;
 
     rows.push({
       id: obj['id'] || '',
       date: dateStr,
-      dateObj: dateObj,
+      dateObj,
       consumedDate: consumedDateStr,
-      consumedDateObj: consumedDateObj,
-      playerAmount: playerAmount,
+      consumedDateObj,
+      playerAmount,
       paymentDate: paymentDateStr,
-      hour: hour,
-      dayOfWeek: dayOfWeek,
-      month: month,
-      revenueMonth: revenueMonth,
+      hour,
+      dayOfWeek,
+      month,
+      revenueMonth,
       week: txWeek,
-      revenueWeek: revenueWeek,
-      city: city,
-      fileCity: fileCity,
-      amount: amount,
+      revenueWeek,
+      city,
+      fileCity,
+      amount,
       tip_amount: tip,
-      total_amount: total,
-      currency: (obj['Currency'] || obj['currency'] || 'EUR').toUpperCase(),
-      status: status,
+      total_amount: amount + tip,
+      currency: (obj['Currency'] || 'EUR').toUpperCase(),
+      status,
       type: payType,
       payment_intent_id: piId,
-      description: obj['Description'] || '',
-      statement: obj['Statement Descriptor'] || '',
     });
   }
   return rows;
@@ -692,44 +654,71 @@ function applyFilters() {
   renderAll();
 }
 
-// ── SORT ──────────────────────────────────────────────
-function sortBy(col) {
-  sortAsc = sortCol === col ? !sortAsc : false;
-  sortCol = col; renderAll();
+// ── SORT (city comparison) ────────────────────────────
+function compSort(col) {
+  compSortAsc = compSortCol === col ? !compSortAsc : col === 'city';
+  compSortCol = col;
+  document.querySelectorAll('.comp-table th').forEach(th => th.classList.remove('sorted'));
+  const th = document.getElementById('cth-' + col);
+  if (th) th.classList.add('sorted');
+  renderCityComparison();
 }
 
 // ── RENDER ────────────────────────────────────────────
 function renderAll() {
-  const succeeded = filtered.filter(r => r.status === 'paid' || r.status === 'succeeded');
-  const totalRevenue = succeeded.reduce((s, r) => s + r.amount, 0);
-  const totalTips = succeeded.reduce((s, r) => s + r.tip_amount, 0);
-  const totalTx = succeeded.length;
-  const tipTx = succeeded.filter(r => r.tip_amount > 0).length;
-  const tipRate = totalTx > 0 ? (tipTx / totalTx * 100) : 0;
-  const avgTx = totalTx > 0 ? totalRevenue / totalTx : 0;
-  const avgTip = tipTx > 0 ? totalTips / tipTx : 0;
+  const succ = filtered.filter(r => r.status === 'paid' || r.status === 'succeeded');
+  renderKPIs(succ);
+  renderCityStrips(succ);
+  renderCharts(succ);
+  renderHeatmap(succ);
+  renderInsights(succ);
+  renderCityComparison();
+  if (activeCity) renderDrilldown(activeCity);
+}
 
-  // KPIs
+// ── KPIs WITH DELTAS ──────────────────────────────────
+function renderKPIs(succ) {
+  const totalRevenue = succ.reduce((s, r) => s + r.amount, 0);
+  const totalTips    = succ.reduce((s, r) => s + r.tip_amount, 0);
+  const totalTx      = succ.length;
+  const tipTx        = succ.filter(r => r.tip_amount > 0).length;
+  const tipRate      = totalTx > 0 ? tipTx / totalTx * 100 : 0;
+  const avgTx        = totalTx > 0 ? totalRevenue / totalTx : 0;
+  const avgTip       = tipTx > 0 ? totalTips / tipTx : 0;
+  const instorePct   = totalTx > 0 ? succ.filter(r => r.type === 'in-store').length / totalTx * 100 : 0;
+
+  const { prevRows, label: deltaLabel } = getPrevRows();
+  const pRevenue = prevRows.reduce((s, r) => s + r.amount, 0);
+  const pTips    = prevRows.reduce((s, r) => s + r.tip_amount, 0);
+  const pTx      = prevRows.length;
+  const pTipTx   = prevRows.filter(r => r.tip_amount > 0).length;
+  const pTipRate = pTx > 0 ? pTipTx / pTx * 100 : 0;
+  const pAvgTx   = pTx > 0 ? pRevenue / pTx : 0;
+
   document.getElementById('kpi-row').innerHTML = `
     <div class="kpi">
       <div class="kpi-label">Total Revenue</div>
       <div class="kpi-val accent-gold">${fmtCur(totalRevenue)}</div>
       <div class="kpi-sub">${totalTx.toLocaleString()} transactions</div>
+      <div class="kpi-delta">${fmtDelta(totalRevenue, pRevenue, deltaLabel)}</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Total Tips</div>
       <div class="kpi-val accent-gold">${fmtCur(totalTips)}</div>
-      <div class="kpi-sub">${tipTx.toLocaleString()} tipped transactions</div>
+      <div class="kpi-sub">${tipTx.toLocaleString()} tipped</div>
+      <div class="kpi-delta">${fmtDelta(totalTips, pTips, deltaLabel)}</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Tip Rate</div>
       <div class="kpi-val accent-green">${tipRate.toFixed(1)}%</div>
       <div class="kpi-sub">of succeeded transactions</div>
+      <div class="kpi-delta">${fmtDeltaPct(tipRate, pTipRate, deltaLabel)}</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Avg Transaction</div>
       <div class="kpi-val">${fmtCur(avgTx)}</div>
       <div class="kpi-sub">excl. tips</div>
+      <div class="kpi-delta">${fmtDelta(avgTx, pAvgTx, deltaLabel)}</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Avg Tip</div>
@@ -737,23 +726,60 @@ function renderAll() {
       <div class="kpi-sub">when tip given</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">In-store vs Online</div>
-      <div class="kpi-val accent-blue">${Math.round(succeeded.filter(r => r.type === 'in-store').length / Math.max(totalTx, 1) * 100)}%</div>
-      <div class="kpi-sub">in-store transactions</div>
+      <div class="kpi-label">In-store %</div>
+      <div class="kpi-val accent-blue">${Math.round(instorePct)}%</div>
+      <div class="kpi-sub">${succ.filter(r => r.type === 'in-store').length} in-store tx</div>
     </div>
   `;
+}
 
-  // City strips
+// ── PREV PERIOD HELPER ────────────────────────────────
+function getPrevRows() {
+  const fWeek  = document.getElementById('f-week').value;
+  const fMonth = document.getElementById('f-month').value;
+  const fCity  = document.getElementById('f-city').value;
+  const fType  = document.getElementById('f-type').value;
+  const fTip   = document.getElementById('f-tip').value;
+  const succ   = r => r.status === 'paid' || r.status === 'succeeded';
+  const cityF  = r => !fCity || r.city === fCity;
+  const typeF  = r => !fType || r.type === fType;
+  const tipF   = r => !fTip || (fTip === 'yes' ? r.tip_amount > 0 : r.tip_amount === 0);
+
+  let prevFilter, label;
+
+  if (fWeek) {
+    const prevW = parseInt(fWeek) - 1;
+    prevFilter = r => r.revenueWeek === prevW;
+    label = `W${prevW}`;
+  } else if (fMonth) {
+    const [y, m] = fMonth.split('-').map(Number);
+    const prevM = m === 1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`;
+    prevFilter = r => r.revenueMonth === prevM;
+    label = new Date(prevM + '-01').toLocaleDateString('en-GB', { month: 'short' });
+  } else {
+    const allWeeks = [...new Set(RAW.map(r => r.revenueWeek))].filter(Boolean).sort((a,b) => a-b);
+    if (allWeeks.length < 2) return { prevRows: [], label: '' };
+    const prevW = allWeeks[allWeeks.length - 2];
+    prevFilter = r => r.revenueWeek === prevW;
+    label = `W${prevW}`;
+  }
+
+  const prevRows = RAW.filter(r => prevFilter(r) && succ(r) && cityF(r) && typeF(r) && tipF(r));
+  return { prevRows, label };
+}
+
+// ── CITY STRIPS ───────────────────────────────────────
+function renderCityStrips(succ) {
   const cities = [...new Set(RAW.map(r => r.city))].sort();
-  const allSucceeded = RAW.filter(r => r.status === 'paid' || r.status === 'succeeded');
-  const maxRev = Math.max(...cities.map(c => allSucceeded.filter(r => r.city === c).reduce((s, r) => s + r.amount, 0)));
+  const allSucc = RAW.filter(r => r.status === 'paid' || r.status === 'succeeded');
+  const maxRev = Math.max(...cities.map(c => allSucc.filter(r => r.city === c).reduce((s,r) => s+r.amount, 0)), 1);
+
   document.getElementById('city-row').innerHTML = cities.map(c => {
-    const cRows = succeeded.filter(r => r.city === c);
-    const allCRows = allSucceeded.filter(r => r.city === c);
-    const rev = cRows.reduce((s, r) => s + r.amount, 0);
-    const tips = cRows.reduce((s, r) => s + r.tip_amount, 0);
-    const allRev = allCRows.reduce((s, r) => s + r.amount, 0);
-    const barW = maxRev > 0 ? allRev / maxRev * 100 : 0;
+    const cRows = succ.filter(r => r.city === c);
+    const allCRows = allSucc.filter(r => r.city === c);
+    const rev = cRows.reduce((s,r) => s+r.amount, 0);
+    const tips = cRows.reduce((s,r) => s+r.tip_amount, 0);
+    const barW = allCRows.reduce((s,r) => s+r.amount, 0) / maxRev * 100;
     const isActive = activeCity === c ? ' active' : '';
     return `<div class="city-card${isActive}" onclick="toggleCity('${c}')">
       <div class="city-name">${c}</div>
@@ -762,21 +788,223 @@ function renderAll() {
       <div class="city-tip-bar"><div class="city-tip-fill" style="width:${barW.toFixed(1)}%"></div></div>
     </div>`;
   }).join('');
-
-  renderCharts(succeeded);
-  renderHeatmap(succeeded);
-  renderTable();
 }
 
+// ── CITY TOGGLE ───────────────────────────────────────
 function toggleCity(city) {
-  activeCity = activeCity === city ? '' : city;
-  const fCity = document.getElementById('f-city');
-  fCity.value = activeCity;
+  if (activeCity === city) {
+    closeDrilldown();
+  } else {
+    activeCity = city;
+    document.getElementById('f-city').value = city;
+    applyFilters();
+  }
+}
+
+function closeDrilldown() {
+  activeCity = '';
+  document.getElementById('f-city').value = '';
+  document.getElementById('drilldown-panel').classList.remove('open');
   applyFilters();
 }
 
+// ── DRILLDOWN ─────────────────────────────────────────
+function renderDrilldown(city) {
+  const panel = document.getElementById('drilldown-panel');
+  panel.classList.add('open');
+
+  const allSucc = RAW.filter(r => r.status === 'paid' || r.status === 'succeeded');
+  const cityRows = allSucc.filter(r => r.city === city);
+  const networkRev = allSucc.reduce((s,r) => s+r.amount, 0);
+  const cityRev = cityRows.reduce((s,r) => s+r.amount, 0);
+  const cityTips = cityRows.reduce((s,r) => s+r.tip_amount, 0);
+  const cityTx = cityRows.length;
+  const cityTipTx = cityRows.filter(r => r.tip_amount > 0).length;
+  const cityTipRate = cityTx > 0 ? cityTipTx / cityTx * 100 : 0;
+  const cityAvg = cityTx > 0 ? cityRev / cityTx : 0;
+  const cityInstore = cityTx > 0 ? cityRows.filter(r => r.type === 'in-store').length / cityTx * 100 : 0;
+  const cityShare = networkRev > 0 ? cityRev / networkRev * 100 : 0;
+
+  // Best week
+  const weekRevs = {};
+  cityRows.forEach(r => { weekRevs[r.revenueWeek] = (weekRevs[r.revenueWeek] || 0) + r.amount; });
+  const bestWeek = Object.entries(weekRevs).sort((a,b) => b[1]-a[1])[0];
+
+  document.getElementById('dd-city-name').textContent = city;
+  document.getElementById('dd-city-sub').textContent = `${cityTx.toLocaleString()} transactions · ${cityShare.toFixed(1)}% of network revenue`;
+
+  document.getElementById('dd-kpis').innerHTML = `
+    <div class="dd-kpi">
+      <div class="dd-kpi-label">YTD Revenue</div>
+      <div class="dd-kpi-val accent-gold">${fmtCur(cityRev)}</div>
+      <div class="dd-kpi-sub">${cityShare.toFixed(1)}% of network</div>
+    </div>
+    <div class="dd-kpi">
+      <div class="dd-kpi-label">Total Tips</div>
+      <div class="dd-kpi-val accent-gold">${fmtCur(cityTips)}</div>
+      <div class="dd-kpi-sub">${cityTipTx} tipped tx</div>
+    </div>
+    <div class="dd-kpi">
+      <div class="dd-kpi-label">Avg Transaction</div>
+      <div class="dd-kpi-val">${fmtCur(cityAvg)}</div>
+      <div class="dd-kpi-sub">excl. tips</div>
+    </div>
+    <div class="dd-kpi">
+      <div class="dd-kpi-label">Tip Rate</div>
+      <div class="dd-kpi-val accent-green">${cityTipRate.toFixed(1)}%</div>
+      <div class="dd-kpi-sub">of transactions</div>
+    </div>
+    <div class="dd-kpi">
+      <div class="dd-kpi-label">In-store</div>
+      <div class="dd-kpi-val accent-blue">${Math.round(cityInstore)}%</div>
+      <div class="dd-kpi-sub">of transactions</div>
+    </div>
+    <div class="dd-kpi">
+      <div class="dd-kpi-label">Best week</div>
+      <div class="dd-kpi-val">${bestWeek ? 'W' + bestWeek[0] : '—'}</div>
+      <div class="dd-kpi-sub">${bestWeek ? fmtCur(bestWeek[1]) : ''}</div>
+    </div>
+  `;
+}
+
+// ── INSIGHTS ROW ──────────────────────────────────────
+function renderInsights(succ) {
+  const now = new Date();
+  const currentMonth = now.toISOString().substring(0, 7);
+  const fMonth = document.getElementById('f-month').value;
+  const targetMonth = fMonth || currentMonth;
+  const [y, m] = targetMonth.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+
+  // Forecast (only for current month)
+  let forecastHTML = '';
+  if (targetMonth === currentMonth) {
+    const daysElapsed = now.getDate();
+    const monthSucc = succ.filter(r => r.revenueMonth === targetMonth);
+    const monthRev = monthSucc.reduce((s,r) => s+r.amount, 0);
+    const dailyPace = daysElapsed > 0 ? monthRev / daysElapsed : 0;
+    const projected = dailyPace * daysInMonth;
+    const pct = Math.round(daysElapsed / daysInMonth * 100);
+    forecastHTML = `
+      <div class="insight-card">
+        <div class="insight-label">Month-end forecast</div>
+        <div class="insight-val accent-gold">${fmtCur(projected)}</div>
+        <div class="insight-sub">${fmtCur(monthRev)} so far · day ${daysElapsed} of ${daysInMonth}</div>
+        <div class="insight-progress"><div class="insight-progress-fill" style="width:${pct}%"></div></div>
+      </div>`;
+  } else {
+    const monthSucc = succ.filter(r => r.revenueMonth === targetMonth);
+    const monthRev = monthSucc.reduce((s,r) => s+r.amount, 0);
+    const monthName = new Date(targetMonth + '-01').toLocaleDateString('en-GB', { month: 'long' });
+    forecastHTML = `
+      <div class="insight-card">
+        <div class="insight-label">${monthName} total</div>
+        <div class="insight-val accent-gold">${fmtCur(monthRev)}</div>
+        <div class="insight-sub">${monthSucc.length} transactions · complete month</div>
+      </div>`;
+  }
+
+  // Best week
+  const weekRevs = {};
+  succ.forEach(r => { weekRevs[r.revenueWeek] = (weekRevs[r.revenueWeek] || 0) + r.amount; });
+  const sortedWeeks = Object.entries(weekRevs).sort((a,b) => b[1]-a[1]);
+  const bestWeek = sortedWeeks[0];
+  const bestWeekHTML = `
+    <div class="insight-card">
+      <div class="insight-label">Peak week</div>
+      <div class="insight-val">${bestWeek ? 'W' + bestWeek[0] : '—'}</div>
+      <div class="insight-sub">${bestWeek ? fmtCur(bestWeek[1]) + ' revenue' : 'No data'}</div>
+    </div>`;
+
+  // YTD total (always unfiltered by time)
+  const ytdSucc = RAW.filter(r => r.status === 'paid' || r.status === 'succeeded');
+  const ytdRev = ytdSucc.reduce((s,r) => s+r.amount, 0);
+  const ytdTips = ytdSucc.reduce((s,r) => s+r.tip_amount, 0);
+  const ytdHTML = `
+    <div class="insight-card">
+      <div class="insight-label">YTD Revenue</div>
+      <div class="insight-val accent-gold">${fmtCur(ytdRev)}</div>
+      <div class="insight-sub">${fmtCur(ytdTips)} in tips · ${ytdSucc.length.toLocaleString()} tx total</div>
+    </div>`;
+
+  document.getElementById('insights-row').innerHTML = forecastHTML + bestWeekHTML + ytdHTML;
+}
+
+// ── CITY COMPARISON TABLE ─────────────────────────────
+function renderCityComparison() {
+  const succ = r => r.status === 'paid' || r.status === 'succeeded';
+
+  // WoW deltas always from latest 2 weeks in RAW
+  const allWeeks = [...new Set(RAW.map(r => r.revenueWeek))].filter(Boolean).sort((a,b) => a-b);
+  const wowDeltas = {};
+  if (allWeeks.length >= 2) {
+    const currW = allWeeks[allWeeks.length - 1];
+    const prevW = allWeeks[allWeeks.length - 2];
+    const cities = [...new Set(RAW.map(r => r.city))];
+    cities.forEach(c => {
+      const curr = RAW.filter(r => r.city === c && r.revenueWeek === currW && succ(r)).reduce((s,r) => s+r.amount, 0);
+      const prev = RAW.filter(r => r.city === c && r.revenueWeek === prevW && succ(r)).reduce((s,r) => s+r.amount, 0);
+      wowDeltas[c] = { curr, prev };
+    });
+    document.getElementById('comp-period').textContent = `WoW: W${currW} vs W${prevW}`;
+  }
+
+  // Stats from filtered data
+  const filtSucc = filtered.filter(succ);
+  const cities = [...new Set(RAW.map(r => r.city))].sort();
+  const rows = cities.map((c, i) => {
+    const cRows = filtSucc.filter(r => r.city === c);
+    const rev = cRows.reduce((s,r) => s+r.amount, 0);
+    const txns = cRows.length;
+    const avg = txns > 0 ? rev / txns : 0;
+    const tipTx = cRows.filter(r => r.tip_amount > 0).length;
+    const tipRate = txns > 0 ? tipTx / txns * 100 : 0;
+    const instore = txns > 0 ? cRows.filter(r => r.type === 'in-store').length / txns * 100 : 0;
+    const wow = wowDeltas[c] || { curr: 0, prev: 0 };
+    return { city: c, revenue: rev, txns, avg, tipRate, instore, wow, rank: i + 1 };
+  });
+
+  // Sort
+  rows.sort((a, b) => {
+    let av = a[compSortCol], bv = b[compSortCol];
+    if (compSortCol === 'city') { av = a.city; bv = b.city; }
+    if (compSortCol === 'wow') { av = a.wow.prev > 0 ? (a.wow.curr - a.wow.prev) / a.wow.prev : 0; bv = b.wow.prev > 0 ? (b.wow.curr - b.wow.prev) / b.wow.prev : 0; }
+    if (compSortCol === 'rank') { av = a.revenue; bv = b.revenue; }
+    if (typeof av === 'string') return compSortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    return compSortAsc ? av - bv : bv - av;
+  });
+
+  // Re-rank by revenue after sort (rank = position by revenue)
+  const byRev = [...rows].sort((a,b) => b.revenue - a.revenue);
+  const rankMap = {};
+  byRev.forEach((r, i) => { rankMap[r.city] = i + 1; });
+
+  document.getElementById('comp-tbody').innerHTML = rows.map(r => {
+    const rank = rankMap[r.city];
+    const rankCls = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
+    const wow = r.wow;
+    let wowHTML = '<span class="delta-neutral">—</span>';
+    if (wow.prev > 0) {
+      const pct = (wow.curr - wow.prev) / wow.prev * 100;
+      const cls = pct > 0 ? 'delta-up' : pct < 0 ? 'delta-down' : 'delta-neutral';
+      const arrow = pct > 0 ? '↑' : pct < 0 ? '↓' : '→';
+      wowHTML = `<span class="${cls}">${arrow} ${pct > 0 ? '+' : ''}${pct.toFixed(1)}%</span>`;
+    }
+    return `<tr>
+      <td><span class="comp-rank ${rankCls}">${rank}</span></td>
+      <td style="font-weight:600">${r.city}</td>
+      <td class="mono accent-gold">${fmtCur(r.revenue)}</td>
+      <td class="mono" style="color:var(--muted2)">${r.txns.toLocaleString()}</td>
+      <td class="mono">${fmtCur(r.avg)}</td>
+      <td class="mono accent-green">${r.tipRate.toFixed(1)}%</td>
+      <td class="mono accent-blue">${Math.round(r.instore)}%</td>
+      <td>${wowHTML}</td>
+    </tr>`;
+  }).join('');
+}
+
 // ── CHARTS ────────────────────────────────────────────
-function renderCharts(succeeded) {
+function renderCharts(succ) {
   const gridColor = 'rgba(255,255,255,0.04)';
   const tickColor = '#444';
   const baseScale = {
@@ -784,21 +1012,20 @@ function renderCharts(succeeded) {
     ticks: { color: tickColor, font: { size: 10, family: 'JetBrains Mono, monospace' } }
   };
 
-  // ── Trend chart — one line per city ──
-  const activeCities = [...new Set(succeeded.map(r => r.city))].sort();
-  const allWeeks = [...new Set(succeeded.map(r => r.revenueWeek))].sort((a, b) => a - b);
-  const trendCityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc'];
+  // Trend
+  const activeCities = [...new Set(succ.map(r => r.city))].sort();
+  const allWeeks = [...new Set(succ.map(r => r.revenueWeek))].sort((a,b) => a-b);
+  const cityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc','#bc4a7f'];
   const trendDatasets = activeCities.map((city, i) => {
-    const cityRows = succeeded.filter(r => r.city === city);
     const weekMap = {};
-    cityRows.forEach(r => { if (!weekMap[r.revenueWeek]) weekMap[r.revenueWeek] = 0; weekMap[r.revenueWeek] += r.amount; });
+    succ.filter(r => r.city === city).forEach(r => { weekMap[r.revenueWeek] = (weekMap[r.revenueWeek] || 0) + r.amount; });
     return {
       label: city,
       data: allWeeks.map(w => Math.round(weekMap[w] || 0)),
-      borderColor: trendCityColors[i % trendCityColors.length],
+      borderColor: cityColors[i % cityColors.length],
       backgroundColor: 'transparent',
       borderWidth: 2,
-      pointBackgroundColor: trendCityColors[i % trendCityColors.length],
+      pointBackgroundColor: cityColors[i % cityColors.length],
       pointRadius: 3,
       tension: 0.4,
       fill: false
@@ -810,92 +1037,71 @@ function renderCharts(succeeded) {
     data: { labels: allWeeks.map(w => 'W' + w), datasets: trendDatasets },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          labels: { color: '#666', font: { size: 10, family: 'JetBrains Mono, monospace' }, boxWidth: 10, padding: 12 }
-        }
-      },
+      plugins: { legend: { display: true, position: 'top', labels: { color: '#666', font: { size: 10, family: 'JetBrains Mono, monospace' }, boxWidth: 10, padding: 12 } } },
       scales: {
-        x: { ...baseScale, grid: { color: gridColor } },
+        x: { ...baseScale },
         y: { ...baseScale, beginAtZero: true, ticks: { ...baseScale.ticks, callback: v => '€' + (v >= 1000 ? Math.round(v/1000) + 'k' : v) } }
       }
     }
   });
   document.getElementById('trend-badge').textContent = allWeeks.length + ' weeks';
 
-  // ── Type donut ──
-  const inStoreTx = succeeded.filter(r => r.type === 'in-store');
-  const onlineTx = succeeded.filter(r => r.type === 'online');
-  const inStoreRev = inStoreTx.reduce((s, r) => s + r.amount, 0);
-  const onlineRev = onlineTx.reduce((s, r) => s + r.amount, 0);
-  const totalRev = inStoreRev + onlineRev;
+  // Type donut
+  const inStoreRev = succ.filter(r => r.type === 'in-store').reduce((s,r) => s+r.amount, 0);
+  const onlineRev  = succ.filter(r => r.type === 'online').reduce((s,r) => s+r.amount, 0);
+  const totalRev   = inStoreRev + onlineRev;
   if (charts.type) charts.type.destroy();
-  const typeCanvas = document.getElementById('chart-type');
-  charts.type = new Chart(typeCanvas, {
+  charts.type = new Chart(document.getElementById('chart-type'), {
     type: 'doughnut',
-    data: {
-      labels: ['In-store', 'Online'],
-      datasets: [{ data: [Math.round(inStoreRev), Math.round(onlineRev)], backgroundColor: ['#4a7fc4', '#8a6ec4'], borderWidth: 0, hoverOffset: 4 }]
-    },
+    data: { labels: ['In-store','Online'], datasets: [{ data: [Math.round(inStoreRev), Math.round(onlineRev)], backgroundColor: ['#4a7fc4','#8a6ec4'], borderWidth: 0, hoverOffset: 4 }] },
     options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false } } }
   });
-  document.getElementById('type-center-val').textContent = succeeded.length.toLocaleString();
+  document.getElementById('type-center-val').textContent = succ.length.toLocaleString();
   document.getElementById('type-legend').innerHTML = [
     { name: 'In-store', color: '#4a7fc4', rev: inStoreRev, pct: totalRev > 0 ? inStoreRev/totalRev*100 : 0 },
-    { name: 'Online', color: '#8a6ec4', rev: onlineRev, pct: totalRev > 0 ? onlineRev/totalRev*100 : 0 }
+    { name: 'Online',   color: '#8a6ec4', rev: onlineRev,  pct: totalRev > 0 ? onlineRev/totalRev*100  : 0 }
   ].map(item => `<div class="donut-item">
     <div class="donut-dot" style="background:${item.color}"></div>
     <span class="donut-name">${item.name}</span>
     <span class="donut-pct">${item.pct.toFixed(0)}%</span>
   </div>`).join('');
 
-  // ── Tip donut ──
-  const tipCount = succeeded.filter(r => r.tip_amount > 0).length;
-  const noTipCount = succeeded.filter(r => r.tip_amount === 0).length;
-  const tipRate = succeeded.length > 0 ? tipCount / succeeded.length * 100 : 0;
+  // Tip donut
+  const tipCount   = succ.filter(r => r.tip_amount > 0).length;
+  const noTipCount = succ.filter(r => r.tip_amount === 0).length;
+  const tipRate    = succ.length > 0 ? tipCount / succ.length * 100 : 0;
+  const totalTips  = succ.reduce((s,r) => s+r.tip_amount, 0);
+  const avgTip     = tipCount > 0 ? totalTips / tipCount : 0;
   if (charts.tip) charts.tip.destroy();
   charts.tip = new Chart(document.getElementById('chart-tip'), {
     type: 'doughnut',
-    data: {
-      labels: ['With tip', 'No tip'],
-      datasets: [{ data: [tipCount, noTipCount], backgroundColor: ['#c8a96e', '#1a1a1f'], borderWidth: 0, hoverOffset: 4 }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false, cutout: '72%',
-      plugins: { legend: { display: false } }
-    }
+    data: { labels: ['With tip','No tip'], datasets: [{ data: [tipCount, noTipCount], backgroundColor: ['#c8a96e','#1a1a1f'], borderWidth: 0, hoverOffset: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false } } }
   });
   document.getElementById('tip-center-val').textContent = tipRate.toFixed(0) + '%';
-  const totalTips2 = succeeded.reduce((s, r) => s + r.tip_amount, 0);
-  const avgTip2 = tipCount > 0 ? totalTips2 / tipCount : 0;
   document.getElementById('tip-legend').innerHTML = `
     <div class="donut-item"><div class="donut-dot" style="background:#c8a96e"></div><span class="donut-name">With tip</span><span class="donut-pct">${tipCount.toLocaleString()}</span></div>
     <div class="donut-item"><div class="donut-dot" style="background:#1a1a1f;border:1px solid #333"></div><span class="donut-name">No tip</span><span class="donut-pct">${noTipCount.toLocaleString()}</span></div>
-    <div class="donut-item" style="margin-top:4px;padding-top:4px;border-top:1px solid var(--b1)"><span class="donut-name" style="color:var(--gold)">Avg tip</span><span class="donut-amt" style="color:var(--gold)">${fmtCur(avgTip2)}</span></div>
+    <div class="donut-item" style="margin-top:4px;padding-top:4px;border-top:1px solid var(--b1)"><span class="donut-name" style="color:var(--gold)">Avg tip</span><span class="donut-amt" style="color:var(--gold)">${fmtCur(avgTip)}</span></div>
   `;
 
-  // ── City bar chart ──
+  // City bar
   const cities2 = [...new Set(RAW.map(r => r.city))].sort();
-  const cityRevs = cities2.map(c => Math.round(succeeded.filter(r => r.city === c).reduce((s, r) => s + r.amount, 0)));
-  const cityTips = cities2.map(c => Math.round(succeeded.filter(r => r.city === c).reduce((s, r) => s + r.tip_amount, 0)));
-  const cityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc'];
   if (charts.city) charts.city.destroy();
   charts.city = new Chart(document.getElementById('chart-city'), {
     type: 'bar',
     data: {
       labels: cities2,
       datasets: [
-        { label: 'Revenue', data: cityRevs, backgroundColor: cities2.map((_, i) => cityColors[i % cityColors.length] + 'cc'), borderRadius: 4, borderSkipped: false },
-        { label: 'Tips', data: cityTips, backgroundColor: cities2.map((_, i) => cityColors[i % cityColors.length] + '44'), borderRadius: 4, borderSkipped: false }
+        { label: 'Revenue', data: cities2.map(c => Math.round(succ.filter(r => r.city===c).reduce((s,r)=>s+r.amount,0))), backgroundColor: cities2.map((_,i) => cityColors[i%cityColors.length]+'cc'), borderRadius: 4, borderSkipped: false },
+        { label: 'Tips',    data: cities2.map(c => Math.round(succ.filter(r => r.city===c).reduce((s,r)=>s+r.tip_amount,0))), backgroundColor: cities2.map((_,i) => cityColors[i%cityColors.length]+'44'), borderRadius: 4, borderSkipped: false }
       ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { ...baseScale, stacked: false },
+        x: { ...baseScale },
         y: { ...baseScale, beginAtZero: true, ticks: { ...baseScale.ticks, callback: v => '€' + (v >= 1000 ? Math.round(v/1000) + 'k' : v) } }
       }
     }
@@ -903,104 +1109,47 @@ function renderCharts(succeeded) {
 }
 
 // ── HEATMAP ───────────────────────────────────────────
-function renderHeatmap(succeeded) {
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function renderHeatmap(succ) {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const hours = [0,4,8,10,12,14,16,18,20,22];
   const hourLabels = ['12am','4am','8am','10am','12pm','2pm','4pm','6pm','8pm','10pm'];
-
   const grid = {};
-  days.forEach((d, di) => {
-    hours.forEach((h, hi) => {
-      grid[`${di}_${hi}`] = 0;
-    });
+  days.forEach((d,di) => hours.forEach((h,hi) => { grid[`${di}_${hi}`] = 0; }));
+  succ.forEach(r => {
+    const hi = hours.findIndex((h,i) => r.hour >= h && r.hour < (hours[i+1] ?? 24));
+    if (hi >= 0) grid[`${r.dayOfWeek}_${hi}`] += r.amount;
   });
-
-  succeeded.forEach(r => {
-    const di = r.dayOfWeek;
-    const hi = hours.findIndex((h, i) => {
-      const next = hours[i+1] !== undefined ? hours[i+1] : 24;
-      return r.hour >= h && r.hour < next;
-    });
-    if (hi >= 0) grid[`${di}_${hi}`] += r.amount;
-  });
-
-  const vals = Object.values(grid);
-  const maxVal = Math.max(...vals, 1);
-
-  const goldStops = ['#1a1a1f','#2a2218','#3d3020','#5a4428','#7a5c30','#9a7040','#c8a96e'];
-
-  function getColor(val) {
-    const t = val / maxVal;
-    const idx = Math.floor(t * (goldStops.length - 1));
-    return goldStops[Math.min(idx, goldStops.length - 1)];
-  }
+  const maxVal = Math.max(...Object.values(grid), 1);
+  const stops = ['#1a1a1f','#2a2218','#3d3020','#5a4428','#7a5c30','#9a7040','#c8a96e'];
+  const getCol = v => stops[Math.min(Math.floor(v/maxVal*(stops.length-1)), stops.length-1)];
 
   let html = '<div></div>';
   days.forEach(d => { html += `<div class="heatmap-header">${d}</div>`; });
-  hours.forEach((h, hi) => {
+  hours.forEach((h,hi) => {
     html += `<div class="heatmap-label">${hourLabels[hi]}</div>`;
-    days.forEach((d, di) => {
+    days.forEach((d,di) => {
       const val = grid[`${di}_${hi}`] || 0;
-      const col = getColor(val);
-      html += `<div class="heatmap-cell" style="background:${col}" title="${d} ${hourLabels[hi]}: ${fmtCur(val)}"></div>`;
+      html += `<div class="heatmap-cell" style="background:${getCol(val)}" title="${d} ${hourLabels[hi]}: ${fmtCur(val)}"></div>`;
     });
   });
   document.getElementById('heatmap').innerHTML = html;
-
-  document.getElementById('heatmap-legend').innerHTML = goldStops.map(c =>
-    `<div class="heatmap-legend-stop" style="background:${c}"></div>`
-  ).join('');
+  document.getElementById('heatmap-legend').innerHTML = stops.map(c => `<div class="heatmap-legend-stop" style="background:${c}"></div>`).join('');
 }
 
-// ── TABLE ─────────────────────────────────────────────
-function renderTable() {
-  const sorted = [...filtered].sort((a, b) => {
-    let av = a[sortCol], bv = b[sortCol];
-    if (sortCol === 'date') { av = a.dateObj; bv = b.dateObj; }
-    if (sortCol === 'consumedDate') { av = a.consumedDateObj || a.dateObj; bv = b.consumedDateObj || b.dateObj; }
-    if (sortCol === 'playerAmount') { av = parseFloat(a.playerAmount) || 0; bv = parseFloat(b.playerAmount) || 0; }
-    if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
-    return sortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
-  });
-
-  const shown = sorted.slice(0, 500);
-  document.getElementById('table-count').textContent = filtered.length.toLocaleString() + ' transactions';
-
-  document.getElementById('tbody').innerHTML = shown.map(r => {
-    const statusBadge = r.status === 'paid'
-      ? '<span class="badge b-success">Paid</span>'
-      : r.status === 'failed'
-      ? '<span class="badge b-fail">Failed</span>'
-      : r.status === 'refunded'
-      ? '<span class="badge b-pending">Refunded</span>'
-      : r.status === 'canceled'
-      ? '<span class="badge b-fail">Canceled</span>'
-      : `<span class="badge b-pending">${r.status}</span>`;
-    const typeBadge = r.type === 'in-store'
-      ? '<span class="badge b-terminal">in-store</span>'
-      : '<span class="badge b-online">online</span>';
-    const tipHtml = r.tip_amount > 0
-      ? `<span class="tip-pill"><span class="tip-dot"></span>${fmtCur(r.tip_amount)}</span>`
-      : `<span class="mono" style="color:var(--muted)">—</span>`;
-
-    return `<tr>
-      <td class="mono" style="color:${r.consumedDate ? 'var(--gold)' : 'var(--muted)'};white-space:nowrap">${r.consumedDate || '—'}</td>
-      <td class="mono" style="color:var(--muted2);white-space:nowrap">${r.date.substring(0,10)}</td>
-      <td style="font-weight:600;font-size:12px">${r.city}</td>
-      <td class="mono" style="color:var(--muted2);text-align:center">${r.playerAmount || '—'}</td>
-      <td class="mono" style="color:var(--text)">${fmtCur(r.amount)}</td>
-      <td>${tipHtml}</td>
-      <td class="mono" style="color:var(--gold)">${fmtCur(r.total_amount)}</td>
-      <td>${statusBadge}</td>
-      <td>${typeBadge}</td>
-      <td class="mono" style="color:var(--muted);font-size:10px">${r.payment_intent_id ? r.payment_intent_id.substring(0,24) + '…' : '—'}</td>
-    </tr>`;
-  }).join('');
-
-  const totalRevenue = filtered.filter(r => r.status === 'paid' || r.status === 'succeeded').reduce((s, r) => s + r.amount, 0);
-  const totalTips = filtered.filter(r => r.status === 'paid' || r.status === 'succeeded').reduce((s, r) => s + r.tip_amount, 0);
-  document.getElementById('tfoot-left').textContent = `Showing ${shown.length} of ${filtered.length} transactions`;
-  document.getElementById('tfoot-right').textContent = `Revenue: ${fmtCur(totalRevenue)} · Tips: ${fmtCur(totalTips)}`;
+// ── DELTA HELPERS ─────────────────────────────────────
+function fmtDelta(curr, prev, label) {
+  if (!label || prev === 0) return `<span class="neutral">—</span>`;
+  const pct = (curr - prev) / prev * 100;
+  const cls = pct > 1 ? 'up' : pct < -1 ? 'down' : 'neutral';
+  const arrow = pct > 1 ? '↑' : pct < -1 ? '↓' : '→';
+  return `<span class="${cls}">${arrow} ${pct > 0 ? '+' : ''}${pct.toFixed(1)}% vs ${label}</span>`;
+}
+function fmtDeltaPct(curr, prev, label) {
+  if (!label || prev === 0) return `<span class="neutral">—</span>`;
+  const diff = curr - prev;
+  const cls = diff > 0.5 ? 'up' : diff < -0.5 ? 'down' : 'neutral';
+  const arrow = diff > 0.5 ? '↑' : diff < -0.5 ? '↓' : '→';
+  return `<span class="${cls}">${arrow} ${diff > 0 ? '+' : ''}${diff.toFixed(1)}pp vs ${label}</span>`;
 }
 
 // ── UTILS ─────────────────────────────────────────────
@@ -1008,14 +1157,13 @@ function fmtCur(n) {
   return '€' + (Math.round(n * 100) / 100).toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function fmtCurShort(n) {
-  if (n >= 1000000) return '€' + (n / 1000000).toFixed(1) + 'M';
-  if (n >= 1000) return '€' + (n / 1000).toFixed(1) + 'k';
+  if (n >= 1000000) return '€' + (n/1000000).toFixed(1) + 'M';
+  if (n >= 1000) return '€' + (n/1000).toFixed(1) + 'k';
   return fmtCur(n);
 }
 function show(id) {
-  ['auth-screen', 'loading-screen', 'dashboard'].forEach(s => {
-    const el = document.getElementById(s);
-    el.style.display = s === id ? (s === 'loading-screen' ? 'flex' : 'block') : 'none';
+  ['auth-screen','loading-screen','dashboard'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? (s === 'loading-screen' ? 'flex' : 'block') : 'none';
   });
 }
 function setLoading(msg) { document.getElementById('loading-text').textContent = msg; }
