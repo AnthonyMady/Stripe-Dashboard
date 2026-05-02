@@ -776,6 +776,14 @@ function renderKPIs(succ) {
   `;
 }
 
+// ── ISO WEEK FROM DATE ────────────────────────────────
+function isoWeekOf(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
 // ── PREV PERIOD HELPER ────────────────────────────────
 function getPrevRows() {
   const fWeek  = document.getElementById('f-week').value;
@@ -800,9 +808,9 @@ function getPrevRows() {
     prevFilter = r => r.revenueMonth === prevM;
     label = new Date(prevM + '-01').toLocaleDateString('en-GB', { month: 'short' });
   } else {
-    const allWeeks = [...new Set(RAW.map(r => r.revenueWeek))].filter(Boolean).sort((a,b) => a-b);
-    if (allWeeks.length < 2) return { prevRows: [], label: '' };
-    const prevW = allWeeks[allWeeks.length - 2];
+    // Anchor to today's actual ISO week, not the max week in data
+    const currW = isoWeekOf(new Date());
+    const prevW = currW - 1;
     prevFilter = r => r.revenueWeek === prevW;
     label = `W${prevW}`;
   }
@@ -981,20 +989,36 @@ function renderInsights(succ) {
 function renderCityComparison() {
   const succ = r => r.status === 'paid' || r.status === 'succeeded';
 
-  // WoW deltas always from latest 2 weeks in RAW
-  const allWeeks = [...new Set(RAW.map(r => r.revenueWeek))].filter(Boolean).sort((a,b) => a-b);
+  // Deltas respect active filter; default anchors to today's ISO week
+  const fWeek  = document.getElementById('f-week').value;
+  const fMonth = document.getElementById('f-month').value;
   const wowDeltas = {};
-  if (allWeeks.length >= 2) {
-    const currW = allWeeks[allWeeks.length - 1];
-    const prevW = allWeeks[allWeeks.length - 2];
-    const cities = [...new Set(RAW.map(r => r.city))];
+  let compLabel = '';
+
+  const cities = [...new Set(RAW.map(r => r.city))];
+
+  if (fMonth) {
+    const [y, m] = fMonth.split('-').map(Number);
+    const prevM = m === 1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`;
+    cities.forEach(c => {
+      const curr = RAW.filter(r => r.city === c && r.revenueMonth === fMonth && succ(r)).reduce((s,r) => s+r.amount, 0);
+      const prev = RAW.filter(r => r.city === c && r.revenueMonth === prevM && succ(r)).reduce((s,r) => s+r.amount, 0);
+      wowDeltas[c] = { curr, prev };
+    });
+    const prevLabel = new Date(prevM + '-01').toLocaleDateString('en-GB', { month: 'short' });
+    const currLabel = new Date(fMonth + '-01').toLocaleDateString('en-GB', { month: 'short' });
+    compLabel = `MoM: ${currLabel} vs ${prevLabel}`;
+  } else {
+    const currW = fWeek ? parseInt(fWeek) : isoWeekOf(new Date());
+    const prevW = currW - 1;
     cities.forEach(c => {
       const curr = RAW.filter(r => r.city === c && r.revenueWeek === currW && succ(r)).reduce((s,r) => s+r.amount, 0);
       const prev = RAW.filter(r => r.city === c && r.revenueWeek === prevW && succ(r)).reduce((s,r) => s+r.amount, 0);
       wowDeltas[c] = { curr, prev };
     });
-    document.getElementById('comp-period').textContent = `WoW: W${currW} vs W${prevW}`;
+    compLabel = `WoW: W${currW} vs W${prevW}`;
   }
+  document.getElementById('comp-period').textContent = compLabel;
 
   // Stats from filtered data
   const filtSucc = filtered.filter(succ);
