@@ -529,12 +529,22 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
   const headers = parseLine(lines[0], delim).map(h => h.trim());
   const rows = [];
 
-  // Extract city and week from filename: stripe_W18_2026_stripe_Berlin_April2026.csv
+  // Extract city and week from filename.
+  // Format A (weekly): stripe_W18_2026_stripe_Belgium_April2026.csv
+  // Format B (YTD):    stripe_2026_Anvers_YTD.csv
   const weekMatch = filename.match(/stripe_W(\d+)/i);
-  const cityMatch = filename.match(/stripe_W\d+_\d+_stripe_([^_]+)_/i);
-  const rawCity = cityMatch ? cityMatch[1] : 'Unknown';
-  const fileCity = rawCity.charAt(0).toUpperCase() + rawCity.slice(1).toLowerCase();
   const week = weekMatch ? parseInt(weekMatch[1]) : 0;
+
+  let rawCity = 'Unknown';
+  const cityMatchA = filename.match(/stripe_W\d+_\d+_stripe_([^_]+)_/i);
+  if (cityMatchA) {
+    rawCity = cityMatchA[1];
+  } else {
+    const cityMatchB = filename.match(/stripe_\d{4}_(.+?)_YTD/i);
+    if (cityMatchB) rawCity = cityMatchB[1].replace(/_/g, ' ');
+  }
+
+  const fileCity = rawCity.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
   const isBelgium = fileCity === 'Belgium';
 
   for (let i = 1; i < lines.length; i++) {
@@ -762,7 +772,7 @@ function renderCharts(succeeded) {
   // ── Trend chart — one line per city ──
   const activeCities = [...new Set(succeeded.map(r => r.city))].sort();
   const allWeeks = [...new Set(succeeded.map(r => r.week))].sort((a, b) => a - b);
-  const trendCityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc','#4ab87a'];
+  const trendCityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc'];
   const trendDatasets = activeCities.map((city, i) => {
     const cityRows = succeeded.filter(r => r.city === city);
     const weekMap = {};
@@ -855,7 +865,7 @@ function renderCharts(succeeded) {
   const cities2 = [...new Set(RAW.map(r => r.city))].sort();
   const cityRevs = cities2.map(c => Math.round(succeeded.filter(r => r.city === c).reduce((s, r) => s + r.amount, 0)));
   const cityTips = cities2.map(c => Math.round(succeeded.filter(r => r.city === c).reduce((s, r) => s + r.tip_amount, 0)));
-  const cityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc','#4ab87a'];
+  const cityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc'];
   if (charts.city) charts.city.destroy();
   charts.city = new Chart(document.getElementById('chart-city'), {
     type: 'bar',
