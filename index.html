@@ -413,6 +413,13 @@ let sortCol = 'date', sortAsc = false;
 let charts = {};
 let activeCity = '';
 
+function isoWeekOf(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
 // ── AUTH ──────────────────────────────────────────────
 function signIn() {
   tokenClient = google.accounts.oauth2.initTokenClient({
@@ -565,7 +572,7 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
     const csvPayType = (obj['Payment Type'] || '').trim().toLowerCase();
     // Use explicit Payment Type column if present (new CSVs)
     // Fall back to pmd_type check, then card_ prefix for old CSVs
-    const inStoreTypes = ['card_present', 'bancontact', 'interac_present'];
+    const inStoreTypes = ['card_present', 'interac_present'];
     const payType = csvPayType === 'in-store' ? 'in-store'
       : csvPayType === 'online' ? 'online'
       : inStoreTypes.includes(pmdType) ? 'in-store'
@@ -694,17 +701,46 @@ function renderAll() {
   const avgTx = totalTx > 0 ? totalRevenue / totalTx : 0;
   const avgTip = tipTx > 0 ? totalTips / tipTx : 0;
 
+  // WoW / MoM deltas — always anchored to today's actual ISO week/month
+  const currW = isoWeekOf(new Date());
+  const prevW = currW - 1;
+  const now = new Date();
+  const currMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+
+  const city = document.getElementById('f-city').value;
+  const allSucc = RAW.filter(r => (r.status === 'paid' || r.status === 'succeeded') && (!city || r.city === city));
+
+  const currWRev  = allSucc.filter(r => r.week === currW).reduce((s, r) => s + r.amount, 0);
+  const prevWRev  = allSucc.filter(r => r.week === prevW).reduce((s, r) => s + r.amount, 0);
+  const currWTips = allSucc.filter(r => r.week === currW).reduce((s, r) => s + r.tip_amount, 0);
+  const prevWTips = allSucc.filter(r => r.week === prevW).reduce((s, r) => s + r.tip_amount, 0);
+  const currMRev  = allSucc.filter(r => r.month === currMonth).reduce((s, r) => s + r.amount, 0);
+  const prevMRev  = allSucc.filter(r => r.month === prevMonth).reduce((s, r) => s + r.amount, 0);
+
+  function fmtDelta(curr, prev, label) {
+    if (!prev) return `<div class="kpi-delta neutral">— no ${label} data</div>`;
+    const pct = ((curr - prev) / prev * 100);
+    const cls = pct >= 0 ? 'up' : 'down';
+    const sign = pct >= 0 ? '+' : '';
+    return `<div class="kpi-delta ${cls}">${sign}${pct.toFixed(1)}% vs ${label}</div>`;
+  }
+
   // KPIs
   document.getElementById('kpi-row').innerHTML = `
     <div class="kpi">
       <div class="kpi-label">Total Revenue</div>
       <div class="kpi-val accent-gold">${fmtCur(totalRevenue)}</div>
       <div class="kpi-sub">${totalTx.toLocaleString()} transactions</div>
+      ${fmtDelta(currWRev, prevWRev, 'prev week')}
+      ${fmtDelta(currMRev, prevMRev, 'prev month')}
     </div>
     <div class="kpi">
       <div class="kpi-label">Total Tips</div>
       <div class="kpi-val accent-gold">${fmtCur(totalTips)}</div>
       <div class="kpi-sub">${tipTx.toLocaleString()} tipped transactions</div>
+      ${fmtDelta(currWTips, prevWTips, 'prev week')}
     </div>
     <div class="kpi">
       <div class="kpi-label">Tip Rate</div>
@@ -772,7 +808,7 @@ function renderCharts(succeeded) {
   // ── Trend chart — one line per city ──
   const activeCities = [...new Set(succeeded.map(r => r.city))].sort();
   const allWeeks = [...new Set(succeeded.map(r => r.week))].sort((a, b) => a - b);
-  const trendCityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc','#4ab87a'];
+  const trendCityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc','#4ab87a','#bc84c4'];
   const trendDatasets = activeCities.map((city, i) => {
     const cityRows = succeeded.filter(r => r.city === city);
     const weekMap = {};
@@ -865,7 +901,7 @@ function renderCharts(succeeded) {
   const cities2 = [...new Set(RAW.map(r => r.city))].sort();
   const cityRevs = cities2.map(c => Math.round(succeeded.filter(r => r.city === c).reduce((s, r) => s + r.amount, 0)));
   const cityTips = cities2.map(c => Math.round(succeeded.filter(r => r.city === c).reduce((s, r) => s + r.tip_amount, 0)));
-  const cityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc','#4ab87a'];
+  const cityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc','#4ab87a','#bc84c4'];
   if (charts.city) charts.city.destroy();
   charts.city = new Chart(document.getElementById('chart-city'), {
     type: 'bar',
