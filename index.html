@@ -353,50 +353,42 @@ tr:hover td { background: rgba(255,255,255,0.012); }
       </div>
     </div>
 
-    <!-- CHARTS ROW 2 -->
-    <div class="chart-grid-2">
-      <div class="chart-card">
-        <div class="chart-title">Revenue by city</div>
-        <div style="position:relative;height:180px"><canvas id="chart-city" role="img" aria-label="Revenue by city bar chart">Revenue by city</canvas></div>
+    <!-- F&B REVENUE PERFORMANCE -->
+    <div class="chart-card" style="margin-bottom:8px">
+      <div class="chart-title">
+        F&B Revenue — All Branches (Odoo POS)
+        <span class="chart-title-badge" id="fnb-rev-badge">loading…</span>
       </div>
-      <div class="chart-card">
-        <div class="chart-title">
-          Transaction heatmap
-          <span style="font-size:9px;color:var(--muted)">amount by day × hour</span>
-        </div>
-        <div class="heatmap-grid" id="heatmap"></div>
-        <div class="heatmap-legend">
-          <span>Low</span>
-          <div class="heatmap-legend-bar" id="heatmap-legend"></div>
-          <span>High</span>
-        </div>
-      </div>
+      <div style="position:relative;height:220px"><canvas id="chart-fnb-revenue"></canvas></div>
     </div>
 
-    <!-- TABLE -->
+    <!-- TOP PRODUCTS PER VENUE -->
     <div class="table-card">
       <div class="table-hdr">
-        <div class="table-hdr-title">Transactions</div>
-        <div class="table-hdr-count" id="table-count"></div>
+        <div class="table-hdr-title">Top Products per Venue</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <select id="f-venue" onchange="renderTopProducts()" style="background:var(--s2);border:1px solid var(--b1);color:var(--text);border-radius:6px;padding:5px 10px;font-size:11px;font-family:'JetBrains Mono',monospace;outline:none;-webkit-appearance:none;cursor:pointer">
+            <option value="">All venues</option>
+          </select>
+          <div class="table-hdr-count" id="fnb-count"></div>
+        </div>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap" style="max-height:480px">
         <table>
           <thead><tr>
-            <th onclick="sortBy('date')">Date</th>
-            <th onclick="sortBy('city')">City</th>
-            <th onclick="sortBy('amount')">Amount</th>
-            <th onclick="sortBy('tip_amount')">Tip</th>
-            <th onclick="sortBy('total_amount')">Total</th>
-            <th>Status</th>
-            <th>Type</th>
-            <th>Payment Intent</th>
+            <th style="width:36px">#</th>
+            <th>Product</th>
+            <th>Category</th>
+            <th>Venue</th>
+            <th onclick="fnbSortBy('qty')" style="cursor:pointer;text-align:right">Qty <span id="fnb-si-qty"></span></th>
+            <th onclick="fnbSortBy('revenue')" style="cursor:pointer;text-align:right">Revenue <span id="fnb-si-revenue"></span></th>
           </tr></thead>
-          <tbody id="tbody"></tbody>
+          <tbody id="fnb-tbody"></tbody>
         </table>
       </div>
       <div class="table-foot">
-        <span id="tfoot-left"></span>
-        <span id="tfoot-right"></span>
+        <span id="fnb-foot-left"></span>
+        <span id="fnb-foot-right"></span>
       </div>
     </div>
   </main>
@@ -409,7 +401,9 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 
 let tokenClient, accessToken;
 let RAW = [], filtered = [];
+let ODOO_ROWS = [];
 let sortCol = 'date', sortAsc = false;
+let fnbSortCol = 'revenue', fnbSortAsc = false;
 let charts = {};
 let activeCity = '';
 
@@ -450,9 +444,12 @@ async function loadData() {
     setLoading('Loading Odoo branch mapping…');
     const odooMap = {};
     let odooLoaded = false;
+    ODOO_ROWS = [];
     for (const file of odooFiles) {
       const content = await driveDownload(file.id);
       parseOdooMapping(content, odooMap);
+      const odooRows = parseOdooFull(content, file.name);
+      ODOO_ROWS = ODOO_ROWS.concat(odooRows);
       odooLoaded = true;
     }
 
@@ -474,6 +471,8 @@ async function loadData() {
     populateFilters();
     show('dashboard');
     applyFilters();
+    renderFnbRevenue();
+    renderTopProducts();
   } catch (e) {
     show('dashboard');
     document.querySelector('main').innerHTML = `<div style="background:var(--red-dim);border:1px solid rgba(196,80,79,0.25);border-radius:var(--r);padding:16px 20px;color:#e07070;font-size:12px;margin:32px 0;font-family:'JetBrains Mono',monospace">⚠ ${e.message}</div>`;
@@ -515,6 +514,52 @@ function parseOdooMapping(content, odooMap) {
       odooMap[piId] = 'Anvers';
     }
   }
+}
+
+// ── ODOO FULL PARSER ─────────────────────────────────
+function parseOdooFull(content, filename) {
+  const lines = content.trim().split('\n');
+  if (lines.length < 2) return [];
+  const delim = lines[0].includes(';') ? ';' : ',';
+  const headers = parseLine(lines[0], delim).map(h => h.trim());
+
+  // Extract branch from filename: odoo_pos_belgium_2026_YTD.csv → belgium → Belgium
+  const branchMatch = filename.match(/odoo_pos_(.+?)_\d{4}/i);
+  const fileBranch = branchMatch
+    ? branchMatch[1].replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+    : 'Unknown';
+
+  const VALID_STATUSES = new Set(['paid', 'posted', 'invoiced', 'done']);
+  const rows = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseLine(lines[i], delim);
+    if (vals.length < 3) continue;
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h] = (vals[idx] || '').trim().replace(/^"|"$/g, ''); });
+
+    const status = (obj['Status'] || '').toLowerCase();
+    if (!VALID_STATUSES.has(status)) continue;
+
+    // Belgium splits into Brussels / Anvers by POS name
+    const pos = obj['Point of Sale'] || '';
+    let branch = fileBranch;
+    if (fileBranch === 'Belgium') {
+      if (pos.toLowerCase().includes('anvers') || pos.toLowerCase().includes('antwerp')) branch = 'Anvers';
+      else branch = 'Brussels';
+    }
+
+    const dateStr = obj['Date'] || '';
+    const month = dateStr.length >= 7 ? dateStr.substring(0, 7) : '';
+    const qty = parseFloat(obj['Qty'] || '0') || 0;
+    const revenue = parseFloat((obj['Price Subtotal Incl. Tax'] || '0').replace(',', '.')) || 0;
+
+    rows.push({ branch, month, pos,
+      product:  obj['Product'] || '',
+      category: obj['Product Category'] || '',
+      qty, revenue });
+  }
+  return rows;
 }
 
 // ── DRIVE ─────────────────────────────────────────────
@@ -647,6 +692,12 @@ function populateFilters() {
   const cities = [...new Set(RAW.map(r => r.city))].sort();
   const weeks = [...new Set(RAW.map(r => r.week))].filter(Boolean).sort((a,b) => a-b);
   const months = [...new Set(RAW.map(r => r.month))].filter(Boolean).sort().reverse();
+
+  // Venue filter for Odoo products
+  const venues = [...new Set(ODOO_ROWS.map(r => r.branch))].sort();
+  const fVenue = document.getElementById('f-venue');
+  fVenue.innerHTML = '<option value="">All venues</option>';
+  venues.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; fVenue.appendChild(o); });
 
   const fCity = document.getElementById('f-city');
   fCity.innerHTML = '<option value="">All cities</option>';
@@ -785,8 +836,6 @@ function renderAll() {
   }).join('');
 
   renderCharts(succeeded);
-  renderHeatmap(succeeded);
-  renderTable();
 }
 
 function toggleCity(city) {
@@ -897,127 +946,112 @@ function renderCharts(succeeded) {
     <div class="donut-item" style="margin-top:4px;padding-top:4px;border-top:1px solid var(--b1)"><span class="donut-name" style="color:var(--gold)">Avg tip</span><span class="donut-amt" style="color:var(--gold)">${fmtCur(avgTip2)}</span></div>
   `;
 
-  // ── City bar chart ──
-  const cities2 = [...new Set(RAW.map(r => r.city))].sort();
-  const cityRevs = cities2.map(c => Math.round(succeeded.filter(r => r.city === c).reduce((s, r) => s + r.amount, 0)));
-  const cityTips = cities2.map(c => Math.round(succeeded.filter(r => r.city === c).reduce((s, r) => s + r.tip_amount, 0)));
-  const cityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc','#4ab87a','#bc84c4'];
-  if (charts.city) charts.city.destroy();
-  charts.city = new Chart(document.getElementById('chart-city'), {
-    type: 'bar',
+}
+
+// ── F&B REVENUE CHART ─────────────────────────────────
+function renderFnbRevenue() {
+  if (!ODOO_ROWS.length) {
+    document.getElementById('fnb-rev-badge').textContent = 'no Odoo data';
+    return;
+  }
+
+  const branches = [...new Set(ODOO_ROWS.map(r => r.branch))].sort();
+  const months   = [...new Set(ODOO_ROWS.map(r => r.month))].filter(Boolean).sort();
+  const colors   = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc','#4ab87a','#bc84c4'];
+
+  const datasets = branches.map((branch, i) => {
+    const monthMap = {};
+    ODOO_ROWS.filter(r => r.branch === branch).forEach(r => {
+      if (!monthMap[r.month]) monthMap[r.month] = 0;
+      monthMap[r.month] += r.revenue;
+    });
+    return {
+      label: branch,
+      data: months.map(m => Math.round(monthMap[m] || 0)),
+      borderColor: colors[i % colors.length],
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      pointBackgroundColor: colors[i % colors.length],
+      pointRadius: 3,
+      tension: 0.4,
+      fill: false
+    };
+  });
+
+  if (charts.fnbRev) charts.fnbRev.destroy();
+  charts.fnbRev = new Chart(document.getElementById('chart-fnb-revenue'), {
+    type: 'line',
     data: {
-      labels: cities2,
-      datasets: [
-        { label: 'Revenue', data: cityRevs, backgroundColor: cities2.map((_, i) => cityColors[i % cityColors.length] + 'cc'), borderRadius: 4, borderSkipped: false },
-        { label: 'Tips', data: cityTips, backgroundColor: cities2.map((_, i) => cityColors[i % cityColors.length] + '44'), borderRadius: 4, borderSkipped: false }
-      ]
+      labels: months.map(m => new Date(m + '-01').toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })),
+      datasets
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { color: '#666', font: { size: 10, family: 'JetBrains Mono, monospace' }, boxWidth: 10, padding: 12 } }
+      },
       scales: {
-        x: { ...baseScale, stacked: false },
-        y: { ...baseScale, beginAtZero: true, ticks: { ...baseScale.ticks, callback: v => '€' + (v >= 1000 ? Math.round(v/1000) + 'k' : v) } }
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#444', font: { size: 10, family: 'JetBrains Mono, monospace' } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true,
+             ticks: { color: '#444', font: { size: 10, family: 'JetBrains Mono, monospace' }, callback: v => '€' + (v >= 1000 ? Math.round(v/1000) + 'k' : v) } }
       }
     }
   });
+
+  const totalFnb = ODOO_ROWS.reduce((s, r) => s + r.revenue, 0);
+  document.getElementById('fnb-rev-badge').textContent = fmtCur(totalFnb) + ' YTD';
 }
 
-// ── HEATMAP ───────────────────────────────────────────
-function renderHeatmap(succeeded) {
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const hours = [0,4,8,10,12,14,16,18,20,22];
-  const hourLabels = ['12am','4am','8am','10am','12pm','2pm','4pm','6pm','8pm','10pm'];
+// ── TOP PRODUCTS TABLE ────────────────────────────────
+function fnbSortBy(col) {
+  fnbSortAsc = fnbSortCol === col ? !fnbSortAsc : false;
+  fnbSortCol = col;
+  renderTopProducts();
+}
 
-  const grid = {};
-  days.forEach((d, di) => {
-    hours.forEach((h, hi) => {
-      grid[`${di}_${hi}`] = 0;
-    });
-  });
-
-  succeeded.forEach(r => {
-    const di = r.dayOfWeek;
-    const hi = hours.findIndex((h, i) => {
-      const next = hours[i+1] !== undefined ? hours[i+1] : 24;
-      return r.hour >= h && r.hour < next;
-    });
-    if (hi >= 0) grid[`${di}_${hi}`] += r.amount;
-  });
-
-  const vals = Object.values(grid);
-  const maxVal = Math.max(...vals, 1);
-
-  const goldStops = ['#1a1a1f','#2a2218','#3d3020','#5a4428','#7a5c30','#9a7040','#c8a96e'];
-
-  function getColor(val) {
-    const t = val / maxVal;
-    const idx = Math.floor(t * (goldStops.length - 1));
-    return goldStops[Math.min(idx, goldStops.length - 1)];
+function renderTopProducts() {
+  if (!ODOO_ROWS.length) {
+    document.getElementById('fnb-tbody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px;font-family:\'JetBrains Mono\',monospace;font-size:11px">No Odoo data loaded yet</td></tr>';
+    return;
   }
 
-  let html = '<div></div>';
-  days.forEach(d => { html += `<div class="heatmap-header">${d}</div>`; });
-  hours.forEach((h, hi) => {
-    html += `<div class="heatmap-label">${hourLabels[hi]}</div>`;
-    days.forEach((d, di) => {
-      const val = grid[`${di}_${hi}`] || 0;
-      const col = getColor(val);
-      html += `<div class="heatmap-cell" style="background:${col}" title="${d} ${hourLabels[hi]}: ${fmtCur(val)}"></div>`;
-    });
-  });
-  document.getElementById('heatmap').innerHTML = html;
+  const venue = document.getElementById('f-venue').value;
+  const rows = venue ? ODOO_ROWS.filter(r => r.branch === venue) : ODOO_ROWS;
 
-  document.getElementById('heatmap-legend').innerHTML = goldStops.map(c =>
-    `<div class="heatmap-legend-stop" style="background:${c}"></div>`
-  ).join('');
-}
-
-// ── TABLE ─────────────────────────────────────────────
-function renderTable() {
-  const sorted = [...filtered].sort((a, b) => {
-    let av = a[sortCol], bv = b[sortCol];
-    if (sortCol === 'date') { av = a.dateObj; bv = b.dateObj; }
-    if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
-    return sortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+  // Aggregate by product + category + branch
+  const map = {};
+  rows.forEach(r => {
+    const key = venue ? `${r.product}|||${r.category}` : `${r.branch}|||${r.product}|||${r.category}`;
+    if (!map[key]) map[key] = { branch: r.branch, product: r.product, category: r.category, qty: 0, revenue: 0 };
+    map[key].qty     += r.qty;
+    map[key].revenue += r.revenue;
   });
 
-  const shown = sorted.slice(0, 500);
-  document.getElementById('table-count').textContent = filtered.length.toLocaleString() + ' transactions';
+  const products = Object.values(map).sort((a, b) =>
+    fnbSortAsc ? a[fnbSortCol] - b[fnbSortCol] : b[fnbSortCol] - a[fnbSortCol]
+  );
 
-  document.getElementById('tbody').innerHTML = shown.map(r => {
-    const statusBadge = r.status === 'paid'
-      ? '<span class="badge b-success">Paid</span>'
-      : r.status === 'failed'
-      ? '<span class="badge b-fail">Failed</span>'
-      : r.status === 'refunded'
-      ? '<span class="badge b-pending">Refunded</span>'
-      : r.status === 'canceled'
-      ? '<span class="badge b-fail">Canceled</span>'
-      : `<span class="badge b-pending">${r.status}</span>`;
-    const typeBadge = r.type === 'in-store'
-      ? '<span class="badge b-terminal">in-store</span>'
-      : '<span class="badge b-online">online</span>';
-    const tipHtml = r.tip_amount > 0
-      ? `<span class="tip-pill"><span class="tip-dot"></span>${fmtCur(r.tip_amount)}</span>`
-      : `<span class="mono" style="color:var(--muted)">—</span>`;
+  const totalRevenue = rows.reduce((s, r) => s + r.revenue, 0);
 
+  // Sort icons
+  document.getElementById('fnb-si-qty').textContent     = fnbSortCol === 'qty'     ? (fnbSortAsc ? '▲' : '▼') : '';
+  document.getElementById('fnb-si-revenue').textContent = fnbSortCol === 'revenue' ? (fnbSortAsc ? '▲' : '▼') : '';
+
+  document.getElementById('fnb-tbody').innerHTML = products.slice(0, 100).map((p, i) => {
+    const pct = totalRevenue > 0 ? (p.revenue / totalRevenue * 100).toFixed(1) : '0.0';
     return `<tr>
-      <td class="mono" style="color:var(--muted2);white-space:nowrap">${r.date.substring(0,16)}</td>
-      <td style="font-weight:600;font-size:12px">${r.city}</td>
-      <td class="mono" style="color:var(--text)">${fmtCur(r.amount)}</td>
-      <td>${tipHtml}</td>
-      <td class="mono" style="color:var(--gold)">${fmtCur(r.total_amount)}</td>
-      <td>${statusBadge}</td>
-      <td>${typeBadge}</td>
-      <td class="mono" style="color:var(--muted);font-size:10px">${r.payment_intent_id ? r.payment_intent_id.substring(0,24) + '…' : '—'}</td>
+      <td class="mono" style="color:var(--muted);text-align:right">${i + 1}</td>
+      <td style="font-weight:600;font-size:12px">${p.product || '—'}</td>
+      <td style="color:var(--muted2);font-size:11px">${p.category || '—'}</td>
+      <td style="font-size:11px;color:var(--muted3)">${venue ? '' : p.branch}</td>
+      <td class="mono" style="text-align:right">${Math.round(p.qty).toLocaleString()}</td>
+      <td class="mono" style="text-align:right;color:var(--gold)">${fmtCur(p.revenue)} <span style="color:var(--muted);font-size:9px">${pct}%</span></td>
     </tr>`;
   }).join('');
 
-  const totalRevenue = filtered.filter(r => r.status === 'paid' || r.status === 'succeeded').reduce((s, r) => s + r.amount, 0);
-  const totalTips = filtered.filter(r => r.status === 'paid' || r.status === 'succeeded').reduce((s, r) => s + r.tip_amount, 0);
-  document.getElementById('tfoot-left').textContent = `Showing ${shown.length} of ${filtered.length} transactions`;
-  document.getElementById('tfoot-right').textContent = `Revenue: ${fmtCur(totalRevenue)} · Tips: ${fmtCur(totalTips)}`;
+  document.getElementById('fnb-count').textContent = products.length.toLocaleString() + ' products';
+  document.getElementById('fnb-foot-left').textContent = `Showing ${Math.min(products.length, 100)} of ${products.length} products`;
+  document.getElementById('fnb-foot-right').textContent = `Total F&B: ${fmtCur(totalRevenue)}`;
 }
 
 // ── UTILS ─────────────────────────────────────────────
