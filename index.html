@@ -362,34 +362,13 @@ tr:hover td { background: rgba(255,255,255,0.012); }
       <div style="position:relative;height:220px"><canvas id="chart-fnb-revenue"></canvas></div>
     </div>
 
-    <!-- TOP PRODUCTS PER VENUE -->
-    <div class="table-card">
+    <!-- TOP F&B PRODUCTS PER VENUE -->
+    <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);overflow:hidden">
       <div class="table-hdr">
-        <div class="table-hdr-title">Top Products per Venue</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <select id="f-venue" onchange="renderTopProducts()" style="background:var(--s2);border:1px solid var(--b1);color:var(--text);border-radius:6px;padding:5px 10px;font-size:11px;font-family:'JetBrains Mono',monospace;outline:none;-webkit-appearance:none;cursor:pointer">
-            <option value="">All venues</option>
-          </select>
-          <div class="table-hdr-count" id="fnb-count"></div>
-        </div>
+        <div class="table-hdr-title">Top F&amp;B Products per Venue</div>
+        <div class="table-hdr-count" id="fnb-count"></div>
       </div>
-      <div class="table-wrap" style="max-height:480px">
-        <table>
-          <thead><tr>
-            <th style="width:36px">#</th>
-            <th>Product</th>
-            <th>Category</th>
-            <th>Venue</th>
-            <th onclick="fnbSortBy('qty')" style="cursor:pointer;text-align:right">Qty <span id="fnb-si-qty"></span></th>
-            <th onclick="fnbSortBy('revenue')" style="cursor:pointer;text-align:right">Revenue <span id="fnb-si-revenue"></span></th>
-          </tr></thead>
-          <tbody id="fnb-tbody"></tbody>
-        </table>
-      </div>
-      <div class="table-foot">
-        <span id="fnb-foot-left"></span>
-        <span id="fnb-foot-right"></span>
-      </div>
+      <div id="fnb-venue-grid" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
     </div>
   </main>
 </div>
@@ -693,11 +672,6 @@ function populateFilters() {
   const weeks = [...new Set(RAW.map(r => r.week))].filter(Boolean).sort((a,b) => a-b);
   const months = [...new Set(RAW.map(r => r.month))].filter(Boolean).sort().reverse();
 
-  // Venue filter for Odoo products
-  const venues = [...new Set(ODOO_ROWS.map(r => r.branch))].sort();
-  const fVenue = document.getElementById('f-venue');
-  fVenue.innerHTML = '<option value="">All venues</option>';
-  venues.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; fVenue.appendChild(o); });
 
   const fCity = document.getElementById('f-city');
   fCity.innerHTML = '<option value="">All cities</option>';
@@ -948,6 +922,14 @@ function renderCharts(succeeded) {
 
 }
 
+// ── F&B FILTER ────────────────────────────────────────
+const NON_FB = ['activit', 'experience', 'event', 'ticket', 'entry', 'escape', 'session', 'booking'];
+function isFnB(row) {
+  const cat  = (row.category || '').toLowerCase();
+  const prod = (row.product  || '').toLowerCase();
+  return !NON_FB.some(kw => cat.includes(kw) || prod.includes(kw));
+}
+
 // ── F&B REVENUE CHART ─────────────────────────────────
 function renderFnbRevenue() {
   if (!ODOO_ROWS.length) {
@@ -955,32 +937,31 @@ function renderFnbRevenue() {
     return;
   }
 
-  const branches = [...new Set(ODOO_ROWS.map(r => r.branch))].sort();
-  const months   = [...new Set(ODOO_ROWS.map(r => r.month))].filter(Boolean).sort();
+  const fnbRows = ODOO_ROWS.filter(isFnB);
+  const branches = [...new Set(fnbRows.map(r => r.branch))].sort();
+  const months   = [...new Set(fnbRows.map(r => r.month))].filter(Boolean).sort();
   const colors   = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc','#4ab87a','#bc84c4'];
 
   const datasets = branches.map((branch, i) => {
     const monthMap = {};
-    ODOO_ROWS.filter(r => r.branch === branch).forEach(r => {
+    fnbRows.filter(r => r.branch === branch).forEach(r => {
       if (!monthMap[r.month]) monthMap[r.month] = 0;
       monthMap[r.month] += r.revenue;
     });
     return {
       label: branch,
       data: months.map(m => Math.round(monthMap[m] || 0)),
+      backgroundColor: colors[i % colors.length] + 'bb',
       borderColor: colors[i % colors.length],
-      backgroundColor: 'transparent',
-      borderWidth: 2,
-      pointBackgroundColor: colors[i % colors.length],
-      pointRadius: 3,
-      tension: 0.4,
-      fill: false
+      borderWidth: 1,
+      borderRadius: 3,
+      stack: 'stack'
     };
   });
 
   if (charts.fnbRev) charts.fnbRev.destroy();
   charts.fnbRev = new Chart(document.getElementById('chart-fnb-revenue'), {
-    type: 'line',
+    type: 'bar',
     data: {
       labels: months.map(m => new Date(m + '-01').toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })),
       datasets
@@ -991,67 +972,75 @@ function renderFnbRevenue() {
         legend: { display: true, position: 'top', labels: { color: '#666', font: { size: 10, family: 'JetBrains Mono, monospace' }, boxWidth: 10, padding: 12 } }
       },
       scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#444', font: { size: 10, family: 'JetBrains Mono, monospace' } } },
-        y: { grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true,
+        x: { stacked: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#444', font: { size: 10, family: 'JetBrains Mono, monospace' } } },
+        y: { stacked: true, grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true,
              ticks: { color: '#444', font: { size: 10, family: 'JetBrains Mono, monospace' }, callback: v => '€' + (v >= 1000 ? Math.round(v/1000) + 'k' : v) } }
       }
     }
   });
 
-  const totalFnb = ODOO_ROWS.reduce((s, r) => s + r.revenue, 0);
+  const totalFnb = fnbRows.reduce((s, r) => s + r.revenue, 0);
   document.getElementById('fnb-rev-badge').textContent = fmtCur(totalFnb) + ' YTD';
 }
 
-// ── TOP PRODUCTS TABLE ────────────────────────────────
-function fnbSortBy(col) {
-  fnbSortAsc = fnbSortCol === col ? !fnbSortAsc : false;
-  fnbSortCol = col;
-  renderTopProducts();
-}
-
+// ── TOP F&B PRODUCTS CARDS ────────────────────────────
 function renderTopProducts() {
+  const grid = document.getElementById('fnb-venue-grid');
   if (!ODOO_ROWS.length) {
-    document.getElementById('fnb-tbody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px;font-family:\'JetBrains Mono\',monospace;font-size:11px">No Odoo data loaded yet</td></tr>';
+    grid.innerHTML = '<div style="color:var(--muted);font-family:\'JetBrains Mono\',monospace;font-size:11px;padding:16px">No Odoo data loaded yet</div>';
     return;
   }
 
-  const venue = document.getElementById('f-venue').value;
-  const rows = venue ? ODOO_ROWS.filter(r => r.branch === venue) : ODOO_ROWS;
+  const fnbRows = ODOO_ROWS.filter(isFnB);
+  const branches = [...new Set(fnbRows.map(r => r.branch))].sort();
 
-  // Aggregate by product + category + branch
-  const map = {};
-  rows.forEach(r => {
-    const key = venue ? `${r.product}|||${r.category}` : `${r.branch}|||${r.product}|||${r.category}`;
-    if (!map[key]) map[key] = { branch: r.branch, product: r.product, category: r.category, qty: 0, revenue: 0 };
-    map[key].qty     += r.qty;
-    map[key].revenue += r.revenue;
-  });
+  let totalProducts = 0;
 
-  const products = Object.values(map).sort((a, b) =>
-    fnbSortAsc ? a[fnbSortCol] - b[fnbSortCol] : b[fnbSortCol] - a[fnbSortCol]
-  );
+  grid.innerHTML = branches.map(branch => {
+    const bRows = fnbRows.filter(r => r.branch === branch);
 
-  const totalRevenue = rows.reduce((s, r) => s + r.revenue, 0);
+    // Aggregate by product
+    const map = {};
+    bRows.forEach(r => {
+      if (!map[r.product]) map[r.product] = { product: r.product, category: r.category, qty: 0, revenue: 0 };
+      map[r.product].qty     += r.qty;
+      map[r.product].revenue += r.revenue;
+    });
 
-  // Sort icons
-  document.getElementById('fnb-si-qty').textContent     = fnbSortCol === 'qty'     ? (fnbSortAsc ? '▲' : '▼') : '';
-  document.getElementById('fnb-si-revenue').textContent = fnbSortCol === 'revenue' ? (fnbSortAsc ? '▲' : '▼') : '';
+    const products = Object.values(map).sort((a, b) => b.revenue - a.revenue);
+    const top = products.slice(0, 8);
+    const maxRev = top[0]?.revenue || 1;
+    const totalRev = bRows.reduce((s, r) => s + r.revenue, 0);
+    totalProducts += products.length;
 
-  document.getElementById('fnb-tbody').innerHTML = products.slice(0, 100).map((p, i) => {
-    const pct = totalRevenue > 0 ? (p.revenue / totalRevenue * 100).toFixed(1) : '0.0';
-    return `<tr>
-      <td class="mono" style="color:var(--muted);text-align:right">${i + 1}</td>
-      <td style="font-weight:600;font-size:12px">${p.product || '—'}</td>
-      <td style="color:var(--muted2);font-size:11px">${p.category || '—'}</td>
-      <td style="font-size:11px;color:var(--muted3)">${venue ? '' : p.branch}</td>
-      <td class="mono" style="text-align:right">${Math.round(p.qty).toLocaleString()}</td>
-      <td class="mono" style="text-align:right;color:var(--gold)">${fmtCur(p.revenue)} <span style="color:var(--muted);font-size:9px">${pct}%</span></td>
-    </tr>`;
+    const rows = top.map(p => {
+      const barW = Math.round(p.revenue / maxRev * 100);
+      const pct = totalRev > 0 ? (p.revenue / totalRev * 100).toFixed(0) : 0;
+      return `<div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">
+          <span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px" title="${p.product}">${p.product}</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--gold);white-space:nowrap;margin-left:8px">${fmtCur(p.revenue)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="flex:1;height:3px;background:var(--b1);border-radius:2px;overflow:hidden">
+            <div style="width:${barW}%;height:100%;background:var(--gold);border-radius:2px;opacity:0.7"></div>
+          </div>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);width:28px;text-align:right">${pct}%</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div style="background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);padding:14px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--b1)">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.04em">${branch}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--gold)">${fmtCur(totalRev)}</div>
+      </div>
+      ${rows}
+      ${products.length > 8 ? `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:6px">+${products.length - 8} more products</div>` : ''}
+    </div>`;
   }).join('');
 
-  document.getElementById('fnb-count').textContent = products.length.toLocaleString() + ' products';
-  document.getElementById('fnb-foot-left').textContent = `Showing ${Math.min(products.length, 100)} of ${products.length} products`;
-  document.getElementById('fnb-foot-right').textContent = `Total F&B: ${fmtCur(totalRevenue)}`;
+  document.getElementById('fnb-count').textContent = totalProducts.toLocaleString() + ' F&B products across ' + branches.length + ' venues';
 }
 
 // ── UTILS ─────────────────────────────────────────────
