@@ -670,7 +670,7 @@ function parseLine(line, delim) {
 function populateFilters() {
   const cities = [...new Set(RAW.map(r => r.city))].sort();
   const weeks = [...new Set(RAW.map(r => r.week))].filter(Boolean).sort((a,b) => a-b);
-  const months = [...new Set(RAW.map(r => r.month))].filter(Boolean).sort().reverse();
+  const months = [...new Set(RAW.map(r => r.month))].filter(Boolean).sort();
 
 
   const fCity = document.getElementById('f-city');
@@ -700,7 +700,7 @@ function applyFilters() {
 
   filtered = RAW.filter(r =>
     (!city || r.city === city) &&
-    (!week || r.week == week) &&
+    (!week || r.week === parseInt(week)) &&
     (!month || r.month === month) &&
     (!status || r.status === status) &&
     (!type || r.type === type) &&
