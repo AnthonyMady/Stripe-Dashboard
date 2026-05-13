@@ -770,13 +770,25 @@ function renderAll() {
   const avgTx = totalTx > 0 ? totalRevenue / totalTx : 0;
   const avgTip = tipTx > 0 ? totalTips / tipTx : 0;
 
-  // WoW / MoM deltas — always anchored to today's actual ISO week/month
-  const currW = isoWeekOf(new Date());
+  // WoW / MoM deltas — follow the selected filter, fall back to today's period
+  const selWeekVal  = document.getElementById('f-week').value;
+  const selMonthVal = document.getElementById('f-month').value;
+
+  const currW = selWeekVal ? parseInt(selWeekVal) : isoWeekOf(new Date());
   const prevW = currW - 1;
-  const now = new Date();
-  const currMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+
+  let currMonth, prevMonth;
+  if (selMonthVal) {
+    currMonth = selMonthVal;
+    const [yr, mo] = selMonthVal.split('-').map(Number);
+    const pd = new Date(yr, mo - 2, 1);
+    prevMonth = `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}`;
+  } else {
+    const now = new Date();
+    currMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const pd = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    prevMonth = `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}`;
+  }
 
   const city = document.getElementById('f-city').value;
   const allSucc = RAW.filter(r => (r.status === 'paid' || r.status === 'succeeded') && (!city || r.city === city));
