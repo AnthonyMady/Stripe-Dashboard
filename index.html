@@ -370,15 +370,46 @@ tr:hover td { background: rgba(255,255,255,0.012); }
       </div>
       <div id="fnb-venue-grid" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
     </div>
+
+    <!-- DAILY TIPS BREAKDOWN -->
+    <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);overflow:hidden;margin-top:8px">
+      <div class="table-hdr">
+        <div class="table-hdr-title">Daily Tips Breakdown</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="table-hdr-count" id="tips-count"></div>
+          <button onclick="exportTipsCSV()" style="background:var(--gold);color:#0a0a0b;border:none;border-radius:6px;padding:5px 14px;font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700;cursor:pointer;letter-spacing:0.06em;text-transform:uppercase">↓ Export CSV</button>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height:400px">
+        <table>
+          <thead><tr>
+            <th>Date</th>
+            <th>City</th>
+            <th>Reader / Terminal</th>
+            <th style="text-align:right">Transactions</th>
+            <th style="text-align:right">Tips Total</th>
+            <th style="text-align:right">Avg Tip</th>
+          </tr></thead>
+          <tbody id="tips-tbody"></tbody>
+        </table>
+      </div>
+      <div class="table-foot">
+        <span id="tips-foot-left"></span>
+        <span id="tips-foot-right"></span>
+      </div>
+    </div>
   </main>
 </div>
 
 <script>
 const CLIENT_ID = '1022326121984-6kvtq4tld6i3gtqq109oo83dj066o70b.apps.googleusercontent.com';
 const FOLDER_ID = '1DCLUZyFw0xJ4KKTIi-AiIxXWBqZ0-bBw';
-const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
+const SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.email';
+
+const FOUNDERS = ['anthony.mady.work@gmail.com', 'julien.vandenitte.work@gmail.com', 'romain2felix@gmail.com'];
 
 let tokenClient, accessToken;
+let isFounder = false;
 let RAW = [], filtered = [];
 let ODOO_ROWS = [];
 let sortCol = 'date', sortAsc = false;
@@ -400,6 +431,10 @@ function signIn() {
     callback: async (resp) => {
       if (resp.error) { showErr(resp.error); return; }
       accessToken = resp.access_token;
+      const userInfo = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      }).then(r => r.json());
+      isFounder = FOUNDERS.includes((userInfo.email || '').toLowerCase());
       await loadData();
     }
   });
@@ -415,7 +450,11 @@ async function loadData() {
   show('loading-screen'); setLoading('Scanning Drive folder…');
   try {
     const allFiles = await getAllFiles(FOLDER_ID);
-    const stripeFiles = allFiles.filter(f => f.name.toLowerCase().includes('stripe_') && f.name.endsWith('.csv'));
+    const stripeFiles = allFiles.filter(f => {
+      const n = f.name.toLowerCase();
+      if (n.includes('shooters') && !isFounder) return false;
+      return n.includes('stripe_') && n.endsWith('.csv');
+    });
     const odooFiles  = allFiles.filter(f => f.name.toLowerCase().includes('odoo_pos_') && f.name.endsWith('.csv'));
 
     if (!stripeFiles.length) throw new Error('No Stripe CSV files found in folder or subfolders');
@@ -452,6 +491,7 @@ async function loadData() {
     applyFilters();
     renderFnbRevenue();
     renderTopProducts();
+    renderTips();
   } catch (e) {
     show('dashboard');
     document.querySelector('main').innerHTML = `<div style="background:var(--red-dim);border:1px solid rgba(196,80,79,0.25);border-radius:var(--r);padding:16px 20px;color:#e07070;font-size:12px;margin:32px 0;font-family:'JetBrains Mono',monospace">⚠ ${e.message}</div>`;
@@ -650,6 +690,7 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
       description: obj['Description'] || '',
       customer_email: obj['Customer Email'] || '',
       statement: obj['Statement Descriptor'] || '',
+      reader_label: obj['Reader Label'] || '',
     });
   }
   return rows;
@@ -709,6 +750,7 @@ function applyFilters() {
   renderAll();
   renderFnbRevenue();
   renderTopProducts();
+  renderTips();
 }
 
 // ── SORT ──────────────────────────────────────────────
@@ -1057,6 +1099,56 @@ function renderTopProducts() {
   }).join('');
 
   document.getElementById('fnb-count').textContent = totalProducts.toLocaleString() + ' F&B products across ' + branches.length + ' venues';
+}
+
+// ── DAILY TIPS ────────────────────────────────────────
+function getTipsRows() {
+  const succeeded = filtered.filter(r => (r.status === 'paid' || r.status === 'succeeded') && r.tip_amount > 0);
+  const map = {};
+  succeeded.forEach(r => {
+    const day = r.date.substring(0, 10);
+    const reader = r.reader_label || r.statement || '—';
+    const key = `${day}|||${r.city}|||${reader}`;
+    if (!map[key]) map[key] = { date: day, city: r.city, reader, count: 0, tips: 0 };
+    map[key].count++;
+    map[key].tips += r.tip_amount;
+  });
+  return Object.values(map).sort((a, b) => b.date.localeCompare(a.date) || a.city.localeCompare(b.city));
+}
+
+function renderTips() {
+  const rows = getTipsRows();
+  const totalTips = rows.reduce((s, r) => s + r.tips, 0);
+
+  document.getElementById('tips-tbody').innerHTML = rows.map(r => `<tr>
+    <td class="mono" style="color:var(--muted2)">${r.date}</td>
+    <td style="font-weight:600">${r.city}</td>
+    <td style="color:var(--muted2);font-size:11px">${r.reader}</td>
+    <td class="mono" style="text-align:right">${r.count}</td>
+    <td class="mono" style="text-align:right;color:var(--gold)">${fmtCur(r.tips)}</td>
+    <td class="mono" style="text-align:right;color:var(--muted2)">${fmtCur(r.tips / r.count)}</td>
+  </tr>`).join('');
+
+  document.getElementById('tips-count').textContent = rows.length + ' entries';
+  document.getElementById('tips-foot-left').textContent = `${rows.length} day/terminal combinations`;
+  document.getElementById('tips-foot-right').textContent = `Total tips: ${fmtCur(totalTips)}`;
+}
+
+function exportTipsCSV() {
+  const rows = getTipsRows();
+  const headers = ['Date', 'City', 'Reader / Terminal', 'Transactions', 'Tips Total', 'Avg Tip'];
+  const lines = [headers.join(',')];
+  rows.forEach(r => {
+    lines.push([r.date, r.city, `"${r.reader}"`, r.count,
+      r.tips.toFixed(2), (r.tips / r.count).toFixed(2)].join(','));
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const city = document.getElementById('f-city').value || 'All';
+  const month = document.getElementById('f-month').value || 'YTD';
+  a.download = `tips_${city}_${month}.csv`;
+  a.click();
 }
 
 // ── UTILS ─────────────────────────────────────────────
