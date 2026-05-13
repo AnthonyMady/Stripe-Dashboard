@@ -707,6 +707,8 @@ function applyFilters() {
     (!tip || (tip === 'yes' ? r.tip_amount > 0 : r.tip_amount === 0))
   );
   renderAll();
+  renderFnbRevenue();
+  renderTopProducts();
 }
 
 // ── SORT ──────────────────────────────────────────────
@@ -937,7 +939,14 @@ function renderFnbRevenue() {
     return;
   }
 
-  const fnbRows = ODOO_ROWS.filter(isFnB);
+  const activeCity  = document.getElementById('f-city').value;
+  const activeMonth = document.getElementById('f-month').value;
+
+  const fnbRows = ODOO_ROWS.filter(r =>
+    isFnB(r) &&
+    (!activeCity  || r.branch === activeCity) &&
+    (!activeMonth || r.month  === activeMonth)
+  );
   const branches = [...new Set(fnbRows.map(r => r.branch))].sort();
   const months   = [...new Set(fnbRows.map(r => r.month))].filter(Boolean).sort();
   const colors   = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc','#4ab87a','#bc84c4'];
@@ -991,7 +1000,14 @@ function renderTopProducts() {
     return;
   }
 
-  const fnbRows = ODOO_ROWS.filter(isFnB);
+  const activeCity  = document.getElementById('f-city').value;
+  const activeMonth = document.getElementById('f-month').value;
+
+  const fnbRows = ODOO_ROWS.filter(r =>
+    isFnB(r) &&
+    (!activeCity  || r.branch === activeCity) &&
+    (!activeMonth || r.month  === activeMonth)
+  );
   const branches = [...new Set(fnbRows.map(r => r.branch))].sort();
 
   let totalProducts = 0;
