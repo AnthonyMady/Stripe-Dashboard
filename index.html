@@ -815,7 +815,7 @@ function renderAll() {
       <div class="kpi-val accent-gold">${fmtCur(totalRevenue)}</div>
       <div class="kpi-sub">${totalTx.toLocaleString()} transactions</div>
       ${fmtDelta(currWRev, prevWRev, 'prev week')}
-      ${fmtDelta(currMRev, prevMRev, 'prev month')}
+      ${!selWeekVal ? fmtDelta(currMRev, prevMRev, 'prev month') : ''}
     </div>
     <div class="kpi">
       <div class="kpi-label">Total Tips</div>
