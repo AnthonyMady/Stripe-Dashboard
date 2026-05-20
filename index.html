@@ -225,6 +225,42 @@ tr:hover td { background: rgba(255,255,255,0.012); }
 .tip-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--gold); }
 .tip-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); }
 
+/* ── TABS ── */
+.tab-bar { display: flex; gap: 0; padding: 0 28px; border-bottom: 1px solid var(--b1); background: var(--s1); }
+.tab-btn { background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--muted); padding: 10px 16px; font-size: 10px; font-family: 'JetBrains Mono', monospace; cursor: pointer; letter-spacing: 0.08em; text-transform: uppercase; transition: all 0.15s; margin-bottom: -1px; }
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+/* ── RECON TABLE ── */
+.recon-wrap { padding: 20px 28px; max-width: 1440px; margin: 0 auto; }
+.recon-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.recon-title { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted2); font-family: 'JetBrains Mono', monospace; }
+.recon-subtitle { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 3px; }
+.recon-table-wrap { overflow-x: auto; background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r); }
+.recon-table { width: 100%; border-collapse: collapse; min-width: 500px; }
+.recon-th-lbl { padding: 10px 18px; font-size: 9px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); background: var(--s2); text-align: left; position: sticky; left: 0; z-index: 3; border-bottom: 1px solid var(--b1); white-space: nowrap; min-width: 240px; }
+.recon-th-val { padding: 10px 18px; font-size: 9px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); background: var(--s2); text-align: right; border-bottom: 1px solid var(--b1); white-space: nowrap; min-width: 110px; }
+.recon-th-val.ytd { color: var(--gold); }
+.recon-sec > td { background: var(--s2); border-top: 2px solid var(--b2); padding: 10px 18px; }
+.recon-sec .rc-lbl { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; position: sticky; left: 0; background: var(--s2); z-index: 2; white-space: nowrap; }
+.recon-sec .rc-amt { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--gold); }
+.recon-row > td { padding: 7px 18px; border-bottom: 1px solid rgba(255,255,255,0.025); background: var(--s1); }
+.recon-row .rc-lbl { font-size: 11px; color: var(--muted3); padding-left: 30px !important; position: sticky; left: 0; background: var(--s1); z-index: 2; white-space: nowrap; }
+.recon-row .rc-amt { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted2); }
+.recon-row .rc-amt.ytd { color: var(--muted3); }
+.recon-gap > td { height: 6px; background: var(--bg); padding: 0; border: none; }
+.recon-tot > td { background: var(--gold-dim); border-top: 1px solid rgba(200,169,110,0.3); border-bottom: 1px solid rgba(200,169,110,0.3); padding: 12px 18px; }
+.recon-tot .rc-lbl { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); position: sticky; left: 0; background: var(--gold-dim); z-index: 2; white-space: nowrap; }
+.recon-tot .rc-amt { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--gold); }
+.recon-city > td { padding: 8px 18px; background: var(--s1); border-bottom: 1px solid rgba(255,255,255,0.025); }
+.recon-city .rc-lbl { font-size: 11px; color: var(--muted2); font-weight: 600; padding-left: 18px !important; position: sticky; left: 0; background: var(--s1); z-index: 2; white-space: nowrap; }
+.recon-city .rc-amt { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--text); }
+.recon-city .rc-amt.ytd { color: var(--gold); }
+.recon-pct > td { padding: 6px 18px; background: var(--s1); border-bottom: 1px solid rgba(255,255,255,0.015); }
+.recon-pct .rc-lbl { font-size: 10px; color: var(--muted); padding-left: 18px !important; position: sticky; left: 0; background: var(--s1); z-index: 2; white-space: nowrap; font-family: 'JetBrains Mono', monospace; }
+.recon-pct .rc-amt { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); }
+.recon-note { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 12px; line-height: 1.7; }
+
 /* ── DONUT LEGEND ── */
 .donut-wrap { display: flex; align-items: center; gap: 20px; }
 .donut-canvas-wrap { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
@@ -284,7 +320,12 @@ tr:hover td { background: rgba(255,255,255,0.012); }
     </div>
   </header>
 
-  <div class="filters">
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-analytics" onclick="switchTab('analytics')">Analytics</button>
+    <button class="tab-btn" id="tab-recon" onclick="switchTab('recon')">Revenue Split</button>
+  </div>
+
+  <div class="filters" id="filters-bar">
     <span class="filter-label">Filter</span>
     <select id="f-city" onchange="applyFilters()"><option value="">All cities</option></select>
     <select id="f-week" onchange="applyFilters()"><option value="">All weeks</option></select>
@@ -309,7 +350,23 @@ tr:hover td { background: rgba(255,255,255,0.012); }
     </select>
   </div>
 
-  <main>
+  <!-- REVENUE SPLIT VIEW -->
+  <div id="recon-view" style="display:none">
+    <div class="recon-wrap">
+      <div class="recon-header">
+        <div>
+          <div class="recon-title">Revenue Split — Belgium</div>
+          <div class="recon-subtitle">Invoices + POS + Stripe · Brussels &amp; Anvers · YTD 2026</div>
+        </div>
+      </div>
+      <div class="recon-table-wrap">
+        <div id="recon-container" style="padding:40px;text-align:center;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px">Loading…</div>
+      </div>
+      <div class="recon-note" id="recon-note"></div>
+    </div>
+  </div>
+
+  <main id="analytics-view">
     <!-- KPI ROW -->
     <div class="kpi-row" id="kpi-row"></div>
 
@@ -412,6 +469,7 @@ let tokenClient, accessToken;
 let isFounder = false;
 let RAW = [], filtered = [];
 let ODOO_ROWS = [];
+let INVOICE_ROWS = [];
 let sortCol = 'date', sortAsc = false;
 let fnbSortCol = 'revenue', fnbSortAsc = false;
 let charts = {};
@@ -455,7 +513,8 @@ async function loadData() {
       if (n.includes('shooters') && !isFounder) return false;
       return n.includes('stripe_') && n.endsWith('.csv');
     });
-    const odooFiles  = allFiles.filter(f => f.name.toLowerCase().includes('odoo_pos_') && f.name.endsWith('.csv'));
+    const odooFiles     = allFiles.filter(f => f.name.toLowerCase().includes('odoo_pos_') && f.name.endsWith('.csv'));
+    const invoiceFiles  = allFiles.filter(f => f.name.toLowerCase().includes('odoo_invoices_') && f.name.endsWith('.csv'));
 
     if (!stripeFiles.length) throw new Error('No Stripe CSV files found in folder or subfolders');
 
@@ -469,6 +528,13 @@ async function loadData() {
       const odooRows = parseOdooFull(content, file.name);
       ODOO_ROWS = ODOO_ROWS.concat(odooRows);
       odooLoaded = true;
+    }
+
+    setLoading('Loading Belgium invoices…');
+    INVOICE_ROWS = [];
+    for (const file of invoiceFiles) {
+      const content = await driveDownload(file.id);
+      INVOICE_ROWS = INVOICE_ROWS.concat(parseInvoiceFull(content));
     }
 
     setLoading(`Loading ${stripeFiles.length} Stripe file(s)…`);
@@ -492,6 +558,7 @@ async function loadData() {
     renderFnbRevenue();
     renderTopProducts();
     renderTips();
+    renderRecon();
   } catch (e) {
     show('dashboard');
     document.querySelector('main').innerHTML = `<div style="background:var(--red-dim);border:1px solid rgba(196,80,79,0.25);border-radius:var(--r);padding:16px 20px;color:#e07070;font-size:12px;margin:32px 0;font-family:'JetBrains Mono',monospace">⚠ ${e.message}</div>`;
@@ -1161,6 +1228,228 @@ function exportTipsCSV() {
   const month = document.getElementById('f-month').value || 'YTD';
   a.download = `tips_${city}_${month}.csv`;
   a.click();
+}
+
+// ── TAB SWITCH ───────────────────────────────────────
+function switchTab(tab) {
+  const isAnalytics = tab === 'analytics';
+  document.getElementById('analytics-view').style.display = isAnalytics ? '' : 'none';
+  document.getElementById('recon-view').style.display     = isAnalytics ? 'none' : '';
+  document.getElementById('filters-bar').style.display    = isAnalytics ? '' : 'none';
+  document.getElementById('tab-analytics').classList.toggle('active', isAnalytics);
+  document.getElementById('tab-recon').classList.toggle('active', !isAnalytics);
+}
+
+// ── INVOICE PARSER ───────────────────────────────────
+function parseInvoiceFull(content) {
+  const lines = content.trim().split('\n');
+  if (lines.length < 2) return [];
+  const delim = lines[0].includes(';') ? ';' : ',';
+  const headers = parseLine(lines[0], delim).map(h => h.trim());
+
+  const dateIdx    = headers.findIndex(h => h.toLowerCase().includes('date'));
+  const journalIdx = headers.findIndex(h => h.toLowerCase().includes('journal'));
+  const totalIdx   = headers.findIndex(h => h.toLowerCase().includes('total in currency'));
+
+  if (dateIdx === -1 || journalIdx === -1 || totalIdx === -1) return [];
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseLine(lines[i], delim);
+    if (vals.length < 3) continue;
+    const dateStr = (vals[dateIdx]    || '').trim().replace(/^"|"$/g, '');
+    const journal = (vals[journalIdx] || '').trim().replace(/^"|"$/g, '');
+    const totStr  = (vals[totalIdx]   || '').trim().replace(/^"|"$/g, '');
+    const amount  = parseFloat(totStr.replace(',', '.')) || 0;
+    const month   = dateStr.length >= 7 ? dateStr.substring(0, 7) : '';
+    if (!month || amount <= 0) continue;
+
+    // City from journal name
+    const jl = journal.toLowerCase();
+    let city;
+    if      (jl.includes('ant') || jl.includes('anvers') || jl.includes('antwerp')) city = 'Anvers';
+    else if (jl.includes('bxl') || jl.includes('bruxelles') || jl.includes('brussels') || jl.includes('bru')) city = 'Brussels';
+    else city = 'Other';
+
+    // Category from journal name
+    const category = (jl.includes('food') || jl.includes('beverage') || jl.includes('f&b') || jl.includes('fnb')) ? 'F&B' : 'Activité';
+
+    rows.push({ month, city, category, journal, amount });
+  }
+  return rows;
+}
+
+// ── REVENUE SPLIT (RECONCILIATION) ───────────────────
+function renderRecon() {
+  const container = document.getElementById('recon-container');
+  if (!container) return;
+
+  const succ = r => r.status === 'paid' || r.status === 'succeeded';
+  const belgStripe = RAW.filter(r => succ(r) && (r.city === 'Brussels' || r.city === 'Anvers'));
+  const belgPOS    = ODOO_ROWS.filter(r => r.branch === 'Brussels' || r.branch === 'Anvers');
+  const belgInv    = INVOICE_ROWS;
+
+  const allMonths = [...new Set([
+    ...belgStripe.map(r => r.month),
+    ...belgPOS.map(r => r.month),
+    ...belgInv.map(r => r.month)
+  ])].filter(Boolean).sort();
+
+  if (!allMonths.length) {
+    container.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-family:\'JetBrains Mono\',monospace;font-size:11px">No data loaded yet</div>';
+    return;
+  }
+
+  // Helper: aggregate rows by month + YTD
+  function agg(rows, amountKey, ...filters) {
+    const result = { YTD: 0 };
+    allMonths.forEach(m => result[m] = 0);
+    rows.forEach(r => {
+      if (!filters.every(fn => fn(r))) return;
+      const v = parseFloat(r[amountKey] || 0);
+      const m = r.month;
+      if (m && result[m] !== undefined) result[m] += v;
+      result.YTD += v;
+    });
+    return result;
+  }
+
+  function addRows(...rows) {
+    const result = { YTD: 0 };
+    allMonths.forEach(m => result[m] = 0);
+    rows.forEach(src => {
+      allMonths.forEach(m => result[m] += src[m] || 0);
+      result.YTD += src.YTD || 0;
+    });
+    return result;
+  }
+
+  // POS category classifier
+  function posCategory(r) {
+    const cat  = (r.category || '').toLowerCase();
+    const prod = (r.product  || '').toLowerCase();
+    if (cat.includes('merge') || prod.includes('merge')) return 'Merge';
+    if (isFnB(r)) return 'F&B';
+    return 'Activité';
+  }
+
+  // ── INVOICES ──
+  const invActBxl = agg(belgInv, 'amount', r => r.city === 'Brussels', r => r.category === 'Activité');
+  const invActAnt = agg(belgInv, 'amount', r => r.city === 'Anvers',   r => r.category === 'Activité');
+  const invFnbBxl = agg(belgInv, 'amount', r => r.city === 'Brussels', r => r.category === 'F&B');
+  const invFnbAnt = agg(belgInv, 'amount', r => r.city === 'Anvers',   r => r.category === 'F&B');
+  const invOthBxl = agg(belgInv, 'amount', r => r.city === 'Brussels', r => r.category === 'Other');
+  const invTotal  = addRows(invActBxl, invActAnt, invFnbBxl, invFnbAnt, invOthBxl);
+
+  // ── POS ──
+  const posActBxl = agg(belgPOS, 'revenue', r => r.branch === 'Brussels', r => posCategory(r) === 'Activité');
+  const posActAnt = agg(belgPOS, 'revenue', r => r.branch === 'Anvers',   r => posCategory(r) === 'Activité');
+  const posFnbBxl = agg(belgPOS, 'revenue', r => r.branch === 'Brussels', r => posCategory(r) === 'F&B');
+  const posFnbAnt = agg(belgPOS, 'revenue', r => r.branch === 'Anvers',   r => posCategory(r) === 'F&B');
+  const posMrgBxl = agg(belgPOS, 'revenue', r => r.branch === 'Brussels', r => posCategory(r) === 'Merge');
+  const posMrgAnt = agg(belgPOS, 'revenue', r => r.branch === 'Anvers',   r => posCategory(r) === 'Merge');
+  const posTotal  = addRows(posActBxl, posActAnt, posFnbBxl, posFnbAnt, posMrgBxl, posMrgAnt);
+
+  // ── STRIPE (card, excl. tips) ──
+  const strBxl   = agg(belgStripe, 'amount', r => r.city === 'Brussels');
+  const strAnt   = agg(belgStripe, 'amount', r => r.city === 'Anvers');
+  const strTotal = addRows(strBxl, strAnt);
+
+  // ── TIPS ──
+  const tipBxl   = agg(belgStripe, 'tip_amount', r => r.city === 'Brussels');
+  const tipAnt   = agg(belgStripe, 'tip_amount', r => r.city === 'Anvers');
+  const tipTotal = addRows(tipBxl, tipAnt);
+
+  // ── TOTALS ──
+  const grandTotal = addRows(invTotal, posTotal, strTotal, tipTotal);
+  const bxlTotal   = addRows(invActBxl, invFnbBxl, invOthBxl, posActBxl, posFnbBxl, posMrgBxl, strBxl, tipBxl);
+  const antTotal   = addRows(invActAnt, invFnbAnt, posActAnt, posFnbAnt, posMrgAnt, strAnt, tipAnt);
+
+  // ── RENDER ──
+  const cols = [...allMonths, 'YTD'];
+  const monthLbls = allMonths.map(m =>
+    new Date(m + '-02').toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })
+  );
+  const colLbls = [...monthLbls, 'YTD'];
+
+  const fmt = v => v > 0.005 ? fmtCur(v) : '<span style="color:var(--muted)">—</span>';
+  const fmtPct = (num, den) => den > 0 ? (num / den * 100).toFixed(1) + '%' : '—';
+
+  const colCells = (data, cls = '') => cols.map((c, i) =>
+    `<td class="rc-amt${i === cols.length - 1 ? ' ytd' : ''}${cls ? ' ' + cls : ''}">${fmt(data[c])}</td>`
+  ).join('');
+
+  const secRow = (label, data) =>
+    `<tr class="recon-sec"><td class="rc-lbl">${label}</td>${colCells(data)}</tr>`;
+  const subRow = (label, data) =>
+    `<tr class="recon-row"><td class="rc-lbl">${label}</td>${colCells(data)}</tr>`;
+  const cityRow = (label, data) =>
+    `<tr class="recon-city"><td class="rc-lbl">${label}</td>${colCells(data)}</tr>`;
+  const pctRow = (label, bxl, ant, tot) =>
+    `<tr class="recon-pct">
+      <td class="rc-lbl">${label}</td>
+      ${cols.map((c, i) => `<td class="rc-amt">${fmtPct(bxl[c], tot[c])} / ${fmtPct(ant[c], tot[c])}</td>`).join('')}
+    </tr>`;
+  const gap = () => '<tr class="recon-gap"><td colspan="' + (cols.length + 1) + '"></td></tr>';
+
+  const hasInvoices = belgInv.length > 0;
+  const hasPOS      = belgPOS.length > 0;
+
+  container.innerHTML = `
+    <table class="recon-table">
+      <thead>
+        <tr>
+          <th class="recon-th-lbl">Revenue Stream</th>
+          ${colLbls.map((l, i) => `<th class="recon-th-val${i === colLbls.length - 1 ? ' ytd' : ''}">${l}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${hasInvoices ? `
+        ${secRow('Invoices', invTotal)}
+        ${subRow('Activité Brussels', invActBxl)}
+        ${subRow('Activité Anvers', invActAnt)}
+        ${subRow('F&B Brussels', invFnbBxl)}
+        ${subRow('F&B Anvers', invFnbAnt)}
+        ${invOthBxl.YTD > 0.01 ? subRow('Other Brussels', invOthBxl) : ''}
+        ${gap()}` : ''}
+
+        ${hasPOS ? `
+        ${secRow('POS (Odoo)', posTotal)}
+        ${subRow('Activité Brussels', posActBxl)}
+        ${subRow('Activité Anvers', posActAnt)}
+        ${subRow('F&B Brussels', posFnbBxl)}
+        ${subRow('F&B Anvers', posFnbAnt)}
+        ${posMrgBxl.YTD > 0.01 ? subRow('Merge Brussels', posMrgBxl) : ''}
+        ${posMrgAnt.YTD > 0.01 ? subRow('Merge Anvers', posMrgAnt) : ''}
+        ${gap()}` : ''}
+
+        ${secRow('Stripe (Card)', strTotal)}
+        ${subRow('Brussels', strBxl)}
+        ${subRow('Anvers', strAnt)}
+        ${gap()}
+
+        ${secRow('Tips', tipTotal)}
+        ${subRow('Brussels', tipBxl)}
+        ${subRow('Anvers', tipAnt)}
+        ${gap()}
+
+        <tr class="recon-tot">
+          <td class="rc-lbl">TOTAL — Belgium</td>
+          ${cols.map((c, i) => `<td class="rc-amt">${fmt(grandTotal[c])}</td>`).join('')}
+        </tr>
+        ${cityRow('Brussels', bxlTotal)}
+        ${cityRow('Anvers', antTotal)}
+        ${pctRow('Brussels / Anvers split', bxlTotal, antTotal, grandTotal)}
+      </tbody>
+    </table>`;
+
+  // Source note
+  const invCount = belgInv.length;
+  const posCount = belgPOS.length;
+  document.getElementById('recon-note').textContent =
+    `Sources: ${strBxl.YTD + strAnt.YTD > 0 ? 'Stripe CSV · ' : ''}` +
+    `${posCount > 0 ? posCount + ' Odoo POS rows · ' : ''}` +
+    `${invCount > 0 ? invCount + ' invoice rows' : 'No invoices loaded — run Odoo export & saveFilesToDrive()'}`;
 }
 
 // ── UTILS ─────────────────────────────────────────────
