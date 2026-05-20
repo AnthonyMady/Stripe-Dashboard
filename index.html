@@ -260,6 +260,16 @@ tr:hover td { background: rgba(255,255,255,0.012); }
 .recon-pct .rc-lbl { font-size: 10px; color: var(--muted); padding-left: 18px !important; position: sticky; left: 0; background: var(--s1); z-index: 2; white-space: nowrap; font-family: 'JetBrains Mono', monospace; }
 .recon-pct .rc-amt { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); }
 .recon-note { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 12px; line-height: 1.7; }
+.recon-tip {
+  position: fixed; z-index: 9999; pointer-events: none; display: none;
+  background: var(--s3); border: 1px solid var(--b3); border-radius: 7px;
+  padding: 9px 13px; max-width: 380px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.55);
+}
+.recon-tip-title { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--gold); font-weight: 600; margin-bottom: 5px; }
+.recon-tip-line { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--muted3); line-height: 1.7; }
+.recon-tip-line span { color: var(--muted2); }
+.rc-lbl[data-tip] { cursor: help; }
 
 /* ── DONUT LEGEND ── */
 .donut-wrap { display: flex; align-items: center; gap: 20px; }
@@ -361,6 +371,10 @@ tr:hover td { background: rgba(255,255,255,0.012); }
       </div>
       <div class="recon-table-wrap">
         <div id="recon-container" style="padding:40px;text-align:center;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px">Loading…</div>
+      </div>
+      <div class="recon-tip" id="recon-tip">
+        <div class="recon-tip-title" id="recon-tip-title"></div>
+        <div class="recon-tip-line" id="recon-tip-body"></div>
       </div>
       <div class="recon-note" id="recon-note"></div>
     </div>
@@ -1384,16 +1398,18 @@ function renderRecon() {
     `<td class="rc-amt${i === cols.length - 1 ? ' ytd' : ''}${cls ? ' ' + cls : ''}">${fmt(data[c])}</td>`
   ).join('');
 
-  const secRow = (label, data) =>
-    `<tr class="recon-sec"><td class="rc-lbl">${label}</td>${colCells(data)}</tr>`;
-  const subRow = (label, data) =>
-    `<tr class="recon-row"><td class="rc-lbl">${label}</td>${colCells(data)}</tr>`;
-  const cityRow = (label, data) =>
-    `<tr class="recon-city"><td class="rc-lbl">${label}</td>${colCells(data)}</tr>`;
-  const pctRow = (label, bxl, ant, tot) =>
+  // tip = [title, ...lines]
+  const tipAttr = (tip) => tip ? ` data-tip-title="${tip[0].replace(/"/g,"'")}" data-tip-body="${tip.slice(1).join('|').replace(/"/g,"'")}"` : '';
+  const secRow  = (label, data, tip) =>
+    `<tr class="recon-sec"><td class="rc-lbl"${tipAttr(tip)}>${label}</td>${colCells(data)}</tr>`;
+  const subRow  = (label, data, tip) =>
+    `<tr class="recon-row"><td class="rc-lbl"${tipAttr(tip)}>${label}</td>${colCells(data)}</tr>`;
+  const cityRow = (label, data, tip) =>
+    `<tr class="recon-city"><td class="rc-lbl"${tipAttr(tip)}>${label}</td>${colCells(data)}</tr>`;
+  const pctRow  = (label, bxl, ant, tot) =>
     `<tr class="recon-pct">
       <td class="rc-lbl">${label}</td>
-      ${cols.map((c, i) => `<td class="rc-amt">${fmtPct(bxl[c], tot[c])} / ${fmtPct(ant[c], tot[c])}</td>`).join('')}
+      ${cols.map((c) => `<td class="rc-amt">${fmtPct(bxl[c], tot[c])} / ${fmtPct(ant[c], tot[c])}</td>`).join('')}
     </tr>`;
   const gap = () => '<tr class="recon-gap"><td colspan="' + (cols.length + 1) + '"></td></tr>';
 
@@ -1410,43 +1426,63 @@ function renderRecon() {
       </thead>
       <tbody>
         ${hasInvoices ? `
-        ${secRow('Invoices', invTotal)}
-        ${subRow('Activité Brussels', invActBxl)}
-        ${subRow('Activité Anvers', invActAnt)}
-        ${subRow('F&B Brussels', invFnbBxl)}
-        ${subRow('F&B Anvers', invFnbAnt)}
-        ${invOthBxl.YTD > 0.01 ? subRow('Other Brussels', invOthBxl) : ''}
+        ${secRow('Invoices', invTotal, ['odoo_invoices_belgium_2026_YTD.csv', 'Column: Untaxed Amount Signed Currency (ex-VAT)', 'Excluded: BRU+ANT-ONLINE SALES · Customer Invoices · Ventes Stripe', 'Status: posted only'])}
+        ${subRow('Activité Brussels', invActBxl, ['Activité Brussels — Invoices', 'Journal contains: bxl / bruxelles / brussels / bru', 'Category: non-F&B journal name', 'File: odoo_invoices_belgium_2026_YTD.csv'])}
+        ${subRow('Activité Anvers', invActAnt, ['Activité Anvers — Invoices', 'Journal contains: ant / anvers / antwerp', 'Category: non-F&B journal name', 'File: odoo_invoices_belgium_2026_YTD.csv'])}
+        ${subRow('F&B Brussels', invFnbBxl, ['F&B Brussels — Invoices', 'Journal contains: bxl + food / beverage / f&b / fnb', 'File: odoo_invoices_belgium_2026_YTD.csv'])}
+        ${subRow('F&B Anvers', invFnbAnt, ['F&B Anvers — Invoices', 'Journal contains: ant + food / beverage / f&b / fnb', 'File: odoo_invoices_belgium_2026_YTD.csv'])}
+        ${invOthBxl.YTD > 0.01 ? subRow('Other Brussels', invOthBxl, ['Other Brussels — Invoices', 'Journal city = Brussels, category = Other', 'File: odoo_invoices_belgium_2026_YTD.csv']) : ''}
         ${gap()}` : ''}
 
         ${hasPOS ? `
-        ${secRow('POS (Odoo)', posTotal)}
-        ${subRow('Activité Brussels', posActBxl)}
-        ${subRow('Activité Anvers', posActAnt)}
-        ${subRow('F&B Brussels', posFnbBxl)}
-        ${subRow('F&B Anvers', posFnbAnt)}
-        ${posMrgBxl.YTD > 0.01 ? subRow('Merge Brussels', posMrgBxl) : ''}
-        ${posMrgAnt.YTD > 0.01 ? subRow('Merge Anvers', posMrgAnt) : ''}
+        ${secRow('POS (Odoo)', posTotal, ['odoo_pos_belgium_2026_YTD.csv', 'Column: Price Subtotal (ex-VAT)', 'Status: paid / posted / invoiced / done', 'Split by POS name and product category'])}
+        ${subRow('Activité Brussels', posActBxl, ['Activité Brussels — Odoo POS', 'POS: WoodCutter - Brussels', 'Product category: non-F&B (activit, experience, event, ticket, escape, session…)', 'Column: Price Subtotal (ex-VAT)'])}
+        ${subRow('Activité Anvers', posActAnt, ['Activité Anvers — Odoo POS', 'POS: WoodCutter - Anvers', 'Product category: non-F&B keywords', 'Column: Price Subtotal (ex-VAT)'])}
+        ${subRow('F&B Brussels', posFnbBxl, ['F&B Brussels — Odoo POS', 'POS: WoodCutter - Brussels', 'Product category: food & beverage items (anything not matching Activité keywords)', 'Column: Price Subtotal (ex-VAT)'])}
+        ${subRow('F&B Anvers', posFnbAnt, ['F&B Anvers — Odoo POS', 'POS: WoodCutter - Anvers', 'Product category: food & beverage items', 'Column: Price Subtotal (ex-VAT)'])}
+        ${posMrgBxl.YTD > 0.01 ? subRow('Merge Brussels', posMrgBxl, ['Merge Brussels — Odoo POS', 'POS: WoodCutter - Brussels', 'Product category or name contains: merge']) : ''}
+        ${posMrgAnt.YTD > 0.01 ? subRow('Merge Anvers', posMrgAnt, ['Merge Anvers — Odoo POS', 'POS: WoodCutter - Anvers', 'Product category or name contains: merge']) : ''}
         ${gap()}` : ''}
 
-        ${secRow('Stripe (Card)', strTotal)}
-        ${subRow('Brussels', strBxl)}
-        ${subRow('Anvers', strAnt)}
+        ${secRow('Stripe (Card)', strTotal, ['stripe_2026_Belgium_YTD.csv', 'Online transactions only — in-store Stripe already counted in Odoo POS', 'Amount ÷ 1.21 to remove 21% Belgian VAT', 'City split via Odoo pi_ lookup (odoo_pos_belgium_2026_YTD.csv)'])}
+        ${subRow('Brussels', strBxl, ['Brussels — Stripe Online', 'Default city for Belgium file (no Odoo pi_ match = Brussels)', 'Unmatched pi_ = online payments (no POS record) → Brussels is correct', 'Amount ÷ 1.21 · File: stripe_2026_Belgium_YTD.csv'])}
+        ${subRow('Anvers', strAnt, ['Anvers — Stripe Online', 'pi_ ID matched to WoodCutter - Anvers in Odoo POS data', 'Amount ÷ 1.21 · File: stripe_2026_Belgium_YTD.csv'])}
         ${gap()}
 
-        ${secRow('Tips', tipTotal)}
-        ${subRow('Brussels', tipBxl)}
-        ${subRow('Anvers', tipAnt)}
+        ${secRow('Tips', tipTotal, ['stripe_2026_Belgium_YTD.csv', 'Column: tip_amount · All transaction types (in-store + online)', 'Tips are not VAT-eligible — no ÷1.21 applied', 'City split via same Odoo pi_ lookup'])}
+        ${subRow('Brussels', tipBxl, ['Tips Brussels', 'tip_amount for Brussels transactions (all types)', 'City via Odoo pi_ lookup · File: stripe_2026_Belgium_YTD.csv'])}
+        ${subRow('Anvers', tipAnt, ['Tips Anvers', 'tip_amount for Anvers transactions (all types)', 'City via Odoo pi_ lookup · File: stripe_2026_Belgium_YTD.csv'])}
         ${gap()}
 
         <tr class="recon-tot">
-          <td class="rc-lbl">TOTAL — Belgium</td>
-          ${cols.map((c, i) => `<td class="rc-amt">${fmt(grandTotal[c])}</td>`).join('')}
+          <td class="rc-lbl" data-tip-title="TOTAL — Belgium" data-tip-body="Invoices (ex-VAT) + POS (ex-VAT) + Stripe online (÷1.21) + Tips|No double-counting: in-store Stripe = in Odoo POS · online Stripe = not in POS">TOTAL — Belgium</td>
+          ${cols.map((c) => `<td class="rc-amt">${fmt(grandTotal[c])}</td>`).join('')}
         </tr>
-        ${cityRow('Brussels', bxlTotal)}
-        ${cityRow('Anvers', antTotal)}
+        ${cityRow('Brussels', bxlTotal, ['Brussels Total', 'Inv Activité BXL + Inv F&B BXL + POS Activité BXL + POS F&B BXL + POS Merge BXL + Stripe BXL + Tips BXL'])}
+        ${cityRow('Anvers', antTotal, ['Anvers Total', 'Inv Activité ANT + Inv F&B ANT + POS Activité ANT + POS F&B ANT + POS Merge ANT + Stripe ANT + Tips ANT'])}
         ${pctRow('Brussels / Anvers split', bxlTotal, antTotal, grandTotal)}
       </tbody>
     </table>`;
+
+  // Tooltip wiring
+  const tipBox   = document.getElementById('recon-tip');
+  const tipTitle = document.getElementById('recon-tip-title');
+  const tipBody  = document.getElementById('recon-tip-body');
+  document.querySelectorAll('.rc-lbl[data-tip-title]').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      tipTitle.textContent = el.getAttribute('data-tip-title');
+      tipBody.innerHTML = (el.getAttribute('data-tip-body') || '')
+        .split('|').map(line => `<div>${line}</div>`).join('');
+      tipBox.style.display = 'block';
+    });
+    el.addEventListener('mousemove', e => {
+      const x = e.clientX + 16, y = e.clientY - 10;
+      const bw = document.documentElement.clientWidth;
+      tipBox.style.left = (x + 380 > bw ? bw - 396 : x) + 'px';
+      tipBox.style.top  = y + 'px';
+    });
+    el.addEventListener('mouseleave', () => { tipBox.style.display = 'none'; });
+  });
 
   // Source note
   const invCount = belgInv.length;
