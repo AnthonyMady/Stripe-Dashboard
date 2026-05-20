@@ -356,7 +356,7 @@ tr:hover td { background: rgba(255,255,255,0.012); }
       <div class="recon-header">
         <div>
           <div class="recon-title">Revenue Split — Belgium</div>
-          <div class="recon-subtitle">Invoices + POS + Stripe · Brussels &amp; Anvers · YTD 2026</div>
+          <div class="recon-subtitle">Ex-VAT · Invoices (Odoo) + POS (ex-VAT) + Stripe online (÷1.21) + Tips · Brussels &amp; Anvers</div>
         </div>
       </div>
       <div class="recon-table-wrap">
@@ -638,7 +638,7 @@ function parseOdooFull(content, filename) {
     const dateStr = obj['Date'] || '';
     const month = dateStr.length >= 7 ? dateStr.substring(0, 7) : '';
     const qty = parseFloat(obj['Qty'] || '0') || 0;
-    const revenue = parseFloat((obj['Price Subtotal Incl. Tax'] || '0').replace(',', '.')) || 0;
+    const revenue = parseFloat((obj['Price Subtotal'] || '0').replace(',', '.')) || 0;
 
     rows.push({ branch, month, pos,
       product:  obj['Product'] || '',
@@ -1249,7 +1249,7 @@ function parseInvoiceFull(content) {
 
   const dateIdx    = headers.findIndex(h => h.toLowerCase().includes('date'));
   const journalIdx = headers.findIndex(h => h.toLowerCase().includes('journal'));
-  const totalIdx   = headers.findIndex(h => h.toLowerCase().includes('total in currency'));
+  const totalIdx   = headers.findIndex(h => h.toLowerCase().includes('untaxed amount'));
 
   if (dateIdx === -1 || journalIdx === -1 || totalIdx === -1) return [];
 
@@ -1350,12 +1350,17 @@ function renderRecon() {
   const posMrgAnt = agg(belgPOS, 'revenue', r => r.branch === 'Anvers',   r => posCategory(r) === 'Merge');
   const posTotal  = addRows(posActBxl, posActAnt, posFnbBxl, posFnbAnt, posMrgBxl, posMrgAnt);
 
-  // ── STRIPE (card, excl. tips) ──
-  const strBxl   = agg(belgStripe, 'amount', r => r.city === 'Brussels');
-  const strAnt   = agg(belgStripe, 'amount', r => r.city === 'Anvers');
+  // ── STRIPE (online only, ÷ 1.21 to strip VAT → matches ex-VAT basis of Invoices + POS) ──
+  // In-store Stripe payments are already counted in Odoo POS rows — exclude them here
+  const belgStripeOnline = belgStripe
+    .filter(r => r.type === 'online')
+    .map(r => ({ ...r, amount: r.amount / 1.21 }));
+
+  const strBxl   = agg(belgStripeOnline, 'amount', r => r.city === 'Brussels');
+  const strAnt   = agg(belgStripeOnline, 'amount', r => r.city === 'Anvers');
   const strTotal = addRows(strBxl, strAnt);
 
-  // ── TIPS ──
+  // ── TIPS (all types — tips are not subject to VAT, no divisor needed) ──
   const tipBxl   = agg(belgStripe, 'tip_amount', r => r.city === 'Brussels');
   const tipAnt   = agg(belgStripe, 'tip_amount', r => r.city === 'Anvers');
   const tipTotal = addRows(tipBxl, tipAnt);
