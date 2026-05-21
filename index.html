@@ -707,7 +707,15 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
 
     const amount = parseFloat((obj['Amount'] || '0').replace(',', '.')) || 0;
     const status = (obj['Status'] || obj['status'] || '').toLowerCase();
-    const dateStr = obj['Created date (UTC)'] || obj['date'] || '';
+    const bookingDateStr = obj['Created date (UTC)'] || obj['date'] || '';
+    const consumedDateStr = (obj['consumed_date'] || '').trim();
+
+    // Revenue recognition: use consumed_date when available for bookings on/after Apr 27 2026.
+    // Before that date the field didn't exist in metadata — fall back to booking date.
+    const CONSUMED_CUTOFF = new Date('2026-04-27');
+    const bookingDateObj  = new Date(bookingDateStr);
+    const useConsumed = consumedDateStr && !isNaN(bookingDateObj) && bookingDateObj >= CONSUMED_CUTOFF;
+    const dateStr = useConsumed ? consumedDateStr : bookingDateStr;
     const dateObj = new Date(dateStr);
     const hour = isNaN(dateObj) ? 12 : dateObj.getHours();
     const dayOfWeek = isNaN(dateObj) ? 0 : dateObj.getDay();
@@ -752,7 +760,10 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
 
     rows.push({
       id: obj['id'] || '',
-      date: dateStr,
+      date: dateStr,            // effective date (consumed if available, else booking)
+      booking_date: bookingDateStr,
+      consumed_date: consumedDateStr,
+      date_source: useConsumed ? 'consumed' : 'booking',
       dateObj: dateObj,
       hour: hour,
       dayOfWeek: dayOfWeek,
