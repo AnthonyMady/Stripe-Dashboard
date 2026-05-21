@@ -365,8 +365,19 @@ tr:hover td { background: rgba(255,255,255,0.012); }
     <div class="recon-wrap">
       <div class="recon-header">
         <div>
-          <div class="recon-title">Revenue Split — Belgium</div>
-          <div class="recon-subtitle">Ex-VAT · Invoices (Odoo) + POS (ex-VAT) + Stripe online (÷1.21) + Tips · Brussels &amp; Anvers</div>
+          <div class="recon-title" id="recon-title">Revenue Split — Belgium</div>
+          <div class="recon-subtitle" id="recon-subtitle">Ex-VAT · Invoices + POS (ex-VAT) + Stripe online (÷1.21) + Tips · Brussels &amp; Anvers</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em">Venue</label>
+          <select id="venue-select" onchange="onVenueChange()" style="background:var(--s3);border:1px solid var(--b2);border-radius:6px;color:var(--fg);font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 12px;cursor:pointer;outline:none">
+            <option value="Belgium">Belgium (Brussels &amp; Anvers)</option>
+            <option value="Berlin">Berlin</option>
+            <option value="Frankfurt">Frankfurt</option>
+            <option value="Hamburg">Hamburg</option>
+            <option value="Koln">Koln</option>
+            <option value="Leipzig">Leipzig</option>
+          </select>
         </div>
       </div>
       <div class="recon-table-wrap">
@@ -479,11 +490,24 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googl
 
 const FOUNDERS = ['anthony.mady.work@gmail.com', 'julien.vandenitte.work@gmail.com', 'romain2felix@gmail.com'];
 
+// Revenue Split venue configuration
+// vatDivisor: used to strip VAT from Stripe online amounts (BE=21%, DE=19%)
+// cities: ['Brussels','Anvers'] for Belgium (dual-city), [venue] for German single-city
+const VENUE_CONFIG = {
+  'Belgium':   { vatDivisor: 1.21, cities: ['Brussels', 'Anvers'] },
+  'Berlin':    { vatDivisor: 1.19, cities: ['Berlin']    },
+  'Frankfurt': { vatDivisor: 1.19, cities: ['Frankfurt'] },
+  'Hamburg':   { vatDivisor: 1.19, cities: ['Hamburg']   },
+  'Koln':      { vatDivisor: 1.19, cities: ['Koln']      },
+  'Leipzig':   { vatDivisor: 1.19, cities: ['Leipzig']   },
+};
+
 let tokenClient, accessToken;
 let isFounder = false;
 let RAW = [], filtered = [];
 let ODOO_ROWS = [];
 let INVOICE_ROWS = [];
+let currentReconVenue = 'Belgium';
 let sortCol = 'date', sortAsc = false;
 let fnbSortCol = 'revenue', fnbSortAsc = false;
 let charts = {};
@@ -544,11 +568,14 @@ async function loadData() {
       odooLoaded = true;
     }
 
-    setLoading('Loading Belgium invoices…');
+    setLoading('Loading invoices…');
     INVOICE_ROWS = [];
     for (const file of invoiceFiles) {
       const content = await driveDownload(file.id);
-      INVOICE_ROWS = INVOICE_ROWS.concat(parseInvoiceFull(content));
+      // Derive venue from filename: odoo_invoices_berlin_2026_YTD.csv → 'Berlin'
+      const vm = file.name.match(/odoo_invoices_(.+?)_\d{4}/i);
+      const fileVenue = vm ? vm[1].replace(/_/g,' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Belgium';
+      INVOICE_ROWS = INVOICE_ROWS.concat(parseInvoiceFull(content, fileVenue));
     }
 
     setLoading(`Loading ${stripeFiles.length} Stripe file(s)…`);
@@ -654,7 +681,7 @@ function parseOdooFull(content, filename) {
     const qty = parseFloat(obj['Qty'] || '0') || 0;
     const revenue = parseFloat((obj['Price Subtotal'] || '0').replace(',', '.')) || 0;
 
-    rows.push({ branch, month, pos,
+    rows.push({ branch, venue: fileBranch, month, pos,
       product:  obj['Product'] || '',
       category: obj['Product Category'] || '',
       qty, revenue });
@@ -1266,7 +1293,11 @@ function switchTab(tab) {
 }
 
 // ── INVOICE PARSER ───────────────────────────────────
-function parseInvoiceFull(content) {
+// venue: 'Belgium' uses journal-name city split (Brussels/Anvers).
+// German venues: city = venue (single city, no journal split needed).
+function parseInvoiceFull(content, venue) {
+  venue = venue || 'Belgium';
+  const isBelgium = venue === 'Belgium';
   const lines = content.trim().split('\n');
   if (lines.length < 2) return [];
   const delim = lines[0].includes(';') ? ';' : ',';
@@ -1289,43 +1320,69 @@ function parseInvoiceFull(content) {
     const month   = dateStr.length >= 7 ? dateStr.substring(0, 7) : '';
     if (!month || amount <= 0) continue;
 
-    // City from journal name
     const jl = journal.toLowerCase();
-    let city;
-    if      (jl.includes('ant') || jl.includes('anvers') || jl.includes('antwerp')) city = 'Anvers';
-    else if (jl.includes('bxl') || jl.includes('bruxelles') || jl.includes('brussels') || jl.includes('bru')) city = 'Brussels';
-    else city = 'Other';
 
-    // Category from journal name
+    // City: Belgium splits Brussels/Anvers by journal name; German = single city
+    let city;
+    if (isBelgium) {
+      if      (jl.includes('ant') || jl.includes('anvers') || jl.includes('antwerp')) city = 'Anvers';
+      else if (jl.includes('bxl') || jl.includes('bruxelles') || jl.includes('brussels') || jl.includes('bru')) city = 'Brussels';
+      else city = 'Other';
+    } else {
+      city = venue;
+    }
+
+    // Category from journal name keywords (applies to all venues)
     const category = (jl.includes('food') || jl.includes('beverage') || jl.includes('f&b') || jl.includes('fnb')) ? 'F&B' : 'Activité';
 
-    rows.push({ month, city, category, journal, amount });
+    rows.push({ month, city, venue, category, journal, amount });
   }
   return rows;
 }
 
 // ── REVENUE SPLIT (RECONCILIATION) ───────────────────
-function renderRecon() {
+function onVenueChange() {
+  const v = document.getElementById('venue-select').value;
+  renderRecon(v);
+}
+
+function renderRecon(venue) {
+  venue = venue || currentReconVenue || 'Belgium';
+  currentReconVenue = venue;
+
+  const cfg = VENUE_CONFIG[venue] || VENUE_CONFIG['Belgium'];
+  const { vatDivisor } = cfg;
+  const isBelgium = venue === 'Belgium';
+
+  // Update dynamic header
+  const titleEl    = document.getElementById('recon-title');
+  const subtitleEl = document.getElementById('recon-subtitle');
+  if (titleEl) titleEl.textContent = 'Revenue Split — ' + venue;
+  if (subtitleEl) subtitleEl.textContent =
+    `Ex-VAT · Invoices + POS (ex-VAT) + Stripe online (÷${vatDivisor}) + Tips` +
+    (isBelgium ? ' · Brussels & Anvers' : '');
+
   const container = document.getElementById('recon-container');
   if (!container) return;
 
   const succ = r => r.status === 'paid' || r.status === 'succeeded';
-  const belgStripe = RAW.filter(r => succ(r) && (r.city === 'Brussels' || r.city === 'Anvers'));
-  const belgPOS    = ODOO_ROWS.filter(r => r.branch === 'Brussels' || r.branch === 'Anvers');
-  const belgInv    = INVOICE_ROWS;
+  const venueInv    = INVOICE_ROWS.filter(r => r.venue === venue);
+  const venuePOS    = ODOO_ROWS.filter(r => r.venue === venue);
+  const venueStripe = isBelgium
+    ? RAW.filter(r => succ(r) && (r.city === 'Brussels' || r.city === 'Anvers'))
+    : RAW.filter(r => succ(r) && r.city === venue);
 
   const allMonths = [...new Set([
-    ...belgStripe.map(r => r.month),
-    ...belgPOS.map(r => r.month),
-    ...belgInv.map(r => r.month)
+    ...venueStripe.map(r => r.month),
+    ...venuePOS.map(r => r.month),
+    ...venueInv.map(r => r.month),
   ])].filter(Boolean).sort();
 
   if (!allMonths.length) {
-    container.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-family:\'JetBrains Mono\',monospace;font-size:11px">No data loaded yet</div>';
+    container.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px">No data loaded for ${venue} yet — run the Odoo export and saveFilesToDrive()</div>`;
     return;
   }
 
-  // Helper: aggregate rows by month + YTD
   function agg(rows, amountKey, ...filters) {
     const result = { YTD: 0 };
     allMonths.forEach(m => result[m] = 0);
@@ -1338,7 +1395,6 @@ function renderRecon() {
     });
     return result;
   }
-
   function addRows(...rows) {
     const result = { YTD: 0 };
     allMonths.forEach(m => result[m] = 0);
@@ -1348,8 +1404,6 @@ function renderRecon() {
     });
     return result;
   }
-
-  // POS category classifier
   function posCategory(r) {
     const cat  = (r.category || '').toLowerCase();
     const prod = (r.product  || '').toLowerCase();
@@ -1358,121 +1412,137 @@ function renderRecon() {
     return 'Activité';
   }
 
-  // ── INVOICES ──
-  const invActBxl = agg(belgInv, 'amount', r => r.city === 'Brussels', r => r.category === 'Activité');
-  const invActAnt = agg(belgInv, 'amount', r => r.city === 'Anvers',   r => r.category === 'Activité');
-  const invFnbBxl = agg(belgInv, 'amount', r => r.city === 'Brussels', r => r.category === 'F&B');
-  const invFnbAnt = agg(belgInv, 'amount', r => r.city === 'Anvers',   r => r.category === 'F&B');
-  const invOthBxl = agg(belgInv, 'amount', r => r.city === 'Brussels', r => r.category === 'Other');
-  const invTotal  = addRows(invActBxl, invActAnt, invFnbBxl, invFnbAnt, invOthBxl);
+  const cols     = [...allMonths, 'YTD'];
+  const colLbls  = [...allMonths.map(m => new Date(m+'-02').toLocaleDateString('en-GB',{month:'short',year:'2-digit'})), 'YTD'];
+  const fmt      = v => v > 0.005 ? fmtCur(v) : '<span style="color:var(--muted)">—</span>';
+  const fmtPct   = (num, den) => den > 0 ? (num/den*100).toFixed(1)+'%' : '—';
+  const colCells = (data, cls='') => cols.map((c,i) =>
+    `<td class="rc-amt${i===cols.length-1?' ytd':''}${cls?' '+cls:''}">${fmt(data[c])}</td>`).join('');
+  const tipAttr  = tip => tip ? ` data-tip-title="${tip[0].replace(/"/g,"'")}" data-tip-body="${tip.slice(1).join('|').replace(/"/g,"'")}"` : '';
+  const secRow   = (label, data, tip) => `<tr class="recon-sec"><td class="rc-lbl"${tipAttr(tip)}>${label}</td>${colCells(data)}</tr>`;
+  const subRow   = (label, data, tip) => `<tr class="recon-row"><td class="rc-lbl"${tipAttr(tip)}>${label}</td>${colCells(data)}</tr>`;
+  const cityRow  = (label, data, tip) => `<tr class="recon-city"><td class="rc-lbl"${tipAttr(tip)}>${label}</td>${colCells(data)}</tr>`;
+  const pctRow   = (label, a, b, tot) => `<tr class="recon-pct"><td class="rc-lbl">${label}</td>${cols.map(c=>`<td class="rc-amt">${fmtPct(a[c],tot[c])} / ${fmtPct(b[c],tot[c])}</td>`).join('')}</tr>`;
+  const gap      = () => `<tr class="recon-gap"><td colspan="${cols.length+1}"></td></tr>`;
 
-  // ── POS ──
-  const posActBxl = agg(belgPOS, 'revenue', r => r.branch === 'Brussels', r => posCategory(r) === 'Activité');
-  const posActAnt = agg(belgPOS, 'revenue', r => r.branch === 'Anvers',   r => posCategory(r) === 'Activité');
-  const posFnbBxl = agg(belgPOS, 'revenue', r => r.branch === 'Brussels', r => posCategory(r) === 'F&B');
-  const posFnbAnt = agg(belgPOS, 'revenue', r => r.branch === 'Anvers',   r => posCategory(r) === 'F&B');
-  const posMrgBxl = agg(belgPOS, 'revenue', r => r.branch === 'Brussels', r => posCategory(r) === 'Merge');
-  const posMrgAnt = agg(belgPOS, 'revenue', r => r.branch === 'Anvers',   r => posCategory(r) === 'Merge');
-  const posTotal  = addRows(posActBxl, posActAnt, posFnbBxl, posFnbAnt, posMrgBxl, posMrgAnt);
+  const stripeFile = `stripe_2026_${venue}_YTD.csv`;
+  const posFile    = `odoo_pos_${venue.toLowerCase()}_2026_YTD.csv`;
+  const invFile    = `odoo_invoices_${venue.toLowerCase()}_2026_YTD.csv`;
+  const hasInv     = venueInv.length > 0;
+  const hasPOS     = venuePOS.length > 0;
 
-  // ── STRIPE (online only, ÷ 1.21 to strip VAT → matches ex-VAT basis of Invoices + POS) ──
-  // In-store Stripe payments are already counted in Odoo POS rows — exclude them here
-  const belgStripeOnline = belgStripe
-    .filter(r => r.type === 'online')
-    .map(r => ({ ...r, amount: r.amount / 1.21 }));
+  let tableBody, grandTotal;
 
-  const strBxl   = agg(belgStripeOnline, 'amount', r => r.city === 'Brussels');
-  const strAnt   = agg(belgStripeOnline, 'amount', r => r.city === 'Anvers');
-  const strTotal = addRows(strBxl, strAnt);
+  if (isBelgium) {
+    // ── Belgium: dual-city (Brussels + Anvers) ──
+    const invActBxl = agg(venueInv,'amount', r=>r.city==='Brussels', r=>r.category==='Activité');
+    const invActAnt = agg(venueInv,'amount', r=>r.city==='Anvers',   r=>r.category==='Activité');
+    const invFnbBxl = agg(venueInv,'amount', r=>r.city==='Brussels', r=>r.category==='F&B');
+    const invFnbAnt = agg(venueInv,'amount', r=>r.city==='Anvers',   r=>r.category==='F&B');
+    const invOthBxl = agg(venueInv,'amount', r=>r.city==='Brussels', r=>r.category==='Other');
+    const invTotal  = addRows(invActBxl,invActAnt,invFnbBxl,invFnbAnt,invOthBxl);
 
-  // ── TIPS (all types — tips are not subject to VAT, no divisor needed) ──
-  const tipBxl   = agg(belgStripe, 'tip_amount', r => r.city === 'Brussels');
-  const tipAnt   = agg(belgStripe, 'tip_amount', r => r.city === 'Anvers');
-  const tipTotal = addRows(tipBxl, tipAnt);
+    const posActBxl = agg(venuePOS,'revenue', r=>r.branch==='Brussels', r=>posCategory(r)==='Activité');
+    const posActAnt = agg(venuePOS,'revenue', r=>r.branch==='Anvers',   r=>posCategory(r)==='Activité');
+    const posFnbBxl = agg(venuePOS,'revenue', r=>r.branch==='Brussels', r=>posCategory(r)==='F&B');
+    const posFnbAnt = agg(venuePOS,'revenue', r=>r.branch==='Anvers',   r=>posCategory(r)==='F&B');
+    const posMrgBxl = agg(venuePOS,'revenue', r=>r.branch==='Brussels', r=>posCategory(r)==='Merge');
+    const posMrgAnt = agg(venuePOS,'revenue', r=>r.branch==='Anvers',   r=>posCategory(r)==='Merge');
+    const posTotal  = addRows(posActBxl,posActAnt,posFnbBxl,posFnbAnt,posMrgBxl,posMrgAnt);
 
-  // ── TOTALS ──
-  const grandTotal = addRows(invTotal, posTotal, strTotal, tipTotal);
-  const bxlTotal   = addRows(invActBxl, invFnbBxl, invOthBxl, posActBxl, posFnbBxl, posMrgBxl, strBxl, tipBxl);
-  const antTotal   = addRows(invActAnt, invFnbAnt, posActAnt, posFnbAnt, posMrgAnt, strAnt, tipAnt);
+    const stripeOnline = venueStripe.filter(r=>r.type==='online').map(r=>({...r,amount:r.amount/vatDivisor}));
+    const strBxl   = agg(stripeOnline,'amount', r=>r.city==='Brussels');
+    const strAnt   = agg(stripeOnline,'amount', r=>r.city==='Anvers');
+    const strTotal = addRows(strBxl,strAnt);
 
-  // ── RENDER ──
-  const cols = [...allMonths, 'YTD'];
-  const monthLbls = allMonths.map(m =>
-    new Date(m + '-02').toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })
-  );
-  const colLbls = [...monthLbls, 'YTD'];
+    const tipBxl   = agg(venueStripe,'tip_amount', r=>r.city==='Brussels');
+    const tipAnt   = agg(venueStripe,'tip_amount', r=>r.city==='Anvers');
+    const tipTotal = addRows(tipBxl,tipAnt);
 
-  const fmt = v => v > 0.005 ? fmtCur(v) : '<span style="color:var(--muted)">—</span>';
-  const fmtPct = (num, den) => den > 0 ? (num / den * 100).toFixed(1) + '%' : '—';
+    grandTotal     = addRows(invTotal,posTotal,strTotal,tipTotal);
+    const bxlTotal = addRows(invActBxl,invFnbBxl,invOthBxl,posActBxl,posFnbBxl,posMrgBxl,strBxl,tipBxl);
+    const antTotal = addRows(invActAnt,invFnbAnt,posActAnt,posFnbAnt,posMrgAnt,strAnt,tipAnt);
 
-  const colCells = (data, cls = '') => cols.map((c, i) =>
-    `<td class="rc-amt${i === cols.length - 1 ? ' ytd' : ''}${cls ? ' ' + cls : ''}">${fmt(data[c])}</td>`
-  ).join('');
+    tableBody = `
+      ${hasInv ? `
+      ${secRow('Invoices',invTotal,[invFile,'Column: Untaxed Amount Signed Currency (ex-VAT)','Excluded: BRU+ANT-ONLINE SALES · Customer Invoices · Ventes Stripe','Status: posted only · partial = 100%'])}
+      ${subRow('Activité Brussels',invActBxl,['Activité Brussels — Invoices','Journal contains: bxl / bruxelles / brussels / bru',`File: ${invFile}`])}
+      ${subRow('Activité Anvers',invActAnt,['Activité Anvers — Invoices','Journal contains: ant / anvers / antwerp',`File: ${invFile}`])}
+      ${subRow('F&B Brussels',invFnbBxl,['F&B Brussels — Invoices','Journal contains: bxl + food / beverage / f&b / fnb',`File: ${invFile}`])}
+      ${subRow('F&B Anvers',invFnbAnt,['F&B Anvers — Invoices','Journal contains: ant + food / beverage / f&b / fnb',`File: ${invFile}`])}
+      ${invOthBxl.YTD>0.01?subRow('Other Brussels',invOthBxl,['Other Brussels — Invoices',`File: ${invFile}`]):''}
+      ${gap()}` : ''}
+      ${hasPOS ? `
+      ${secRow('POS (Odoo)',posTotal,[posFile,'Column: Price Subtotal (ex-VAT)','Status: paid / posted / invoiced / done'])}
+      ${subRow('Activité Brussels',posActBxl,['Activité Brussels — Odoo POS','POS: WoodCutter - Brussels',`File: ${posFile}`])}
+      ${subRow('Activité Anvers',posActAnt,['Activité Anvers — Odoo POS','POS: WoodCutter - Anvers',`File: ${posFile}`])}
+      ${subRow('F&B Brussels',posFnbBxl,['F&B Brussels — Odoo POS','POS: WoodCutter - Brussels',`File: ${posFile}`])}
+      ${subRow('F&B Anvers',posFnbAnt,['F&B Anvers — Odoo POS','POS: WoodCutter - Anvers',`File: ${posFile}`])}
+      ${posMrgBxl.YTD>0.01?subRow('Merge Brussels',posMrgBxl,['Merge Brussels — Odoo POS',`File: ${posFile}`]):''}
+      ${posMrgAnt.YTD>0.01?subRow('Merge Anvers',posMrgAnt,['Merge Anvers — Odoo POS',`File: ${posFile}`]):''}
+      ${gap()}` : ''}
+      ${secRow('Stripe (Card)',strTotal,[stripeFile,`Online transactions only · Amount ÷ ${vatDivisor} (excl. 21% Belgian VAT)`,'In-store Stripe already counted in Odoo POS','City split via Odoo pi_ lookup'])}
+      ${subRow('Brussels',strBxl,['Brussels — Stripe Online',`Amount ÷ ${vatDivisor} · File: ${stripeFile}`])}
+      ${subRow('Anvers',strAnt,['Anvers — Stripe Online',`Amount ÷ ${vatDivisor} · File: ${stripeFile}`])}
+      ${gap()}
+      ${secRow('Tips',addRows(tipBxl,tipAnt),[stripeFile,'Column: tip_amount · All transaction types','Tips are VAT-exempt — no divisor applied'])}
+      ${subRow('Brussels',tipBxl,[`Tips Brussels · File: ${stripeFile}`])}
+      ${subRow('Anvers',tipAnt,[`Tips Anvers · File: ${stripeFile}`])}
+      ${gap()}
+      <tr class="recon-tot"><td class="rc-lbl" data-tip-title="TOTAL — Belgium" data-tip-body="Invoices (ex-VAT) + POS (ex-VAT) + Stripe online (÷${vatDivisor}) + Tips|No double-counting: in-store Stripe counted in Odoo POS">TOTAL — Belgium</td>${cols.map(c=>`<td class="rc-amt">${fmt(grandTotal[c])}</td>`).join('')}</tr>
+      ${cityRow('Brussels',bxlTotal,['Brussels Total','All Brussels revenue streams combined'])}
+      ${cityRow('Anvers',antTotal,['Anvers Total','All Anvers revenue streams combined'])}
+      ${pctRow('Brussels / Anvers split',bxlTotal,antTotal,grandTotal)}`;
 
-  // tip = [title, ...lines]
-  const tipAttr = (tip) => tip ? ` data-tip-title="${tip[0].replace(/"/g,"'")}" data-tip-body="${tip.slice(1).join('|').replace(/"/g,"'")}"` : '';
-  const secRow  = (label, data, tip) =>
-    `<tr class="recon-sec"><td class="rc-lbl"${tipAttr(tip)}>${label}</td>${colCells(data)}</tr>`;
-  const subRow  = (label, data, tip) =>
-    `<tr class="recon-row"><td class="rc-lbl"${tipAttr(tip)}>${label}</td>${colCells(data)}</tr>`;
-  const cityRow = (label, data, tip) =>
-    `<tr class="recon-city"><td class="rc-lbl"${tipAttr(tip)}>${label}</td>${colCells(data)}</tr>`;
-  const pctRow  = (label, bxl, ant, tot) =>
-    `<tr class="recon-pct">
-      <td class="rc-lbl">${label}</td>
-      ${cols.map((c) => `<td class="rc-amt">${fmtPct(bxl[c], tot[c])} / ${fmtPct(ant[c], tot[c])}</td>`).join('')}
-    </tr>`;
-  const gap = () => '<tr class="recon-gap"><td colspan="' + (cols.length + 1) + '"></td></tr>';
+  } else {
+    // ── German venues: single city ──
+    const city = venue;
+    const invAct = agg(venueInv,'amount', r=>r.category==='Activité');
+    const invFnb = agg(venueInv,'amount', r=>r.category==='F&B');
+    const invOth = agg(venueInv,'amount', r=>r.category==='Other');
+    const invTotal = addRows(invAct,invFnb,invOth);
 
-  const hasInvoices = belgInv.length > 0;
-  const hasPOS      = belgPOS.length > 0;
+    const posAct = agg(venuePOS,'revenue', r=>posCategory(r)==='Activité');
+    const posFnb = agg(venuePOS,'revenue', r=>posCategory(r)==='F&B');
+    const posMrg = agg(venuePOS,'revenue', r=>posCategory(r)==='Merge');
+    const posTotal = addRows(posAct,posFnb,posMrg);
+
+    const stripeOnline = venueStripe.filter(r=>r.type==='online').map(r=>({...r,amount:r.amount/vatDivisor}));
+    const strCity  = agg(stripeOnline,'amount');
+    const tipCity  = agg(venueStripe,'tip_amount');
+    grandTotal = addRows(invTotal,posTotal,strCity,tipCity);
+
+    tableBody = `
+      ${hasInv ? `
+      ${secRow('Invoices',invTotal,[invFile,'Column: Untaxed Amount Signed Currency (ex-VAT)','Status: posted · reversed excluded · partial = 100%'])}
+      ${invAct.YTD>0.01?subRow(`Activité ${city}`,invAct,[`Activité ${city} — Invoices`,`File: ${invFile}`]):''}
+      ${invFnb.YTD>0.01?subRow(`F&B ${city}`,invFnb,[`F&B ${city} — Invoices`,`File: ${invFile}`]):''}
+      ${invOth.YTD>0.01?subRow(`Other ${city}`,invOth,[`Other ${city} — Invoices`,`File: ${invFile}`]):''}
+      ${gap()}` : ''}
+      ${hasPOS ? `
+      ${secRow('POS (Odoo)',posTotal,[posFile,'Column: Price Subtotal (ex-VAT)','Status: paid / posted / invoiced / done'])}
+      ${posAct.YTD>0.01?subRow(`Activité ${city}`,posAct,[`Activité ${city} — Odoo POS`,`File: ${posFile}`]):''}
+      ${posFnb.YTD>0.01?subRow(`F&B ${city}`,posFnb,[`F&B ${city} — Odoo POS`,`File: ${posFile}`]):''}
+      ${posMrg.YTD>0.01?subRow(`Merge ${city}`,posMrg,[`Merge ${city} — Odoo POS`,`File: ${posFile}`]):''}
+      ${gap()}` : ''}
+      ${strCity.YTD>0.01?`
+      ${secRow('Stripe (Card)',strCity,[stripeFile,`Online only · Amount ÷ ${vatDivisor} (excl. 19% German VAT)`,`File: ${stripeFile}`])}
+      ${subRow(city,strCity,[`${city} — Stripe Online · Amount ÷ ${vatDivisor} · File: ${stripeFile}`])}
+      ${gap()}`:''}
+      ${tipCity.YTD>0.01?`
+      ${secRow('Tips',tipCity,[stripeFile,'Column: tip_amount · All transaction types · VAT-exempt'])}
+      ${subRow(city,tipCity,[`Tips ${city} · File: ${stripeFile}`])}
+      ${gap()}`:''}
+      <tr class="recon-tot"><td class="rc-lbl" data-tip-title="TOTAL — ${venue}" data-tip-body="Invoices (ex-VAT) + POS (ex-VAT) + Stripe online (÷${vatDivisor}) + Tips">TOTAL — ${venue}</td>${cols.map(c=>`<td class="rc-amt">${fmt(grandTotal[c])}</td>`).join('')}</tr>`;
+  }
 
   container.innerHTML = `
     <table class="recon-table">
-      <thead>
-        <tr>
-          <th class="recon-th-lbl">Revenue Stream</th>
-          ${colLbls.map((l, i) => `<th class="recon-th-val${i === colLbls.length - 1 ? ' ytd' : ''}">${l}</th>`).join('')}
-        </tr>
-      </thead>
-      <tbody>
-        ${hasInvoices ? `
-        ${secRow('Invoices', invTotal, ['odoo_invoices_belgium_2026_YTD.csv', 'Column: Untaxed Amount Signed Currency (ex-VAT)', 'Excluded: BRU+ANT-ONLINE SALES · Customer Invoices · Ventes Stripe', 'Status: posted only'])}
-        ${subRow('Activité Brussels', invActBxl, ['Activité Brussels — Invoices', 'Journal contains: bxl / bruxelles / brussels / bru', 'Category: non-F&B journal name', 'File: odoo_invoices_belgium_2026_YTD.csv'])}
-        ${subRow('Activité Anvers', invActAnt, ['Activité Anvers — Invoices', 'Journal contains: ant / anvers / antwerp', 'Category: non-F&B journal name', 'File: odoo_invoices_belgium_2026_YTD.csv'])}
-        ${subRow('F&B Brussels', invFnbBxl, ['F&B Brussels — Invoices', 'Journal contains: bxl + food / beverage / f&b / fnb', 'File: odoo_invoices_belgium_2026_YTD.csv'])}
-        ${subRow('F&B Anvers', invFnbAnt, ['F&B Anvers — Invoices', 'Journal contains: ant + food / beverage / f&b / fnb', 'File: odoo_invoices_belgium_2026_YTD.csv'])}
-        ${invOthBxl.YTD > 0.01 ? subRow('Other Brussels', invOthBxl, ['Other Brussels — Invoices', 'Journal city = Brussels, category = Other', 'File: odoo_invoices_belgium_2026_YTD.csv']) : ''}
-        ${gap()}` : ''}
-
-        ${hasPOS ? `
-        ${secRow('POS (Odoo)', posTotal, ['odoo_pos_belgium_2026_YTD.csv', 'Column: Price Subtotal (ex-VAT)', 'Status: paid / posted / invoiced / done', 'Split by POS name and product category'])}
-        ${subRow('Activité Brussels', posActBxl, ['Activité Brussels — Odoo POS', 'POS: WoodCutter - Brussels', 'Product category: non-F&B (activit, experience, event, ticket, escape, session…)', 'Column: Price Subtotal (ex-VAT)'])}
-        ${subRow('Activité Anvers', posActAnt, ['Activité Anvers — Odoo POS', 'POS: WoodCutter - Anvers', 'Product category: non-F&B keywords', 'Column: Price Subtotal (ex-VAT)'])}
-        ${subRow('F&B Brussels', posFnbBxl, ['F&B Brussels — Odoo POS', 'POS: WoodCutter - Brussels', 'Product category: food & beverage items (anything not matching Activité keywords)', 'Column: Price Subtotal (ex-VAT)'])}
-        ${subRow('F&B Anvers', posFnbAnt, ['F&B Anvers — Odoo POS', 'POS: WoodCutter - Anvers', 'Product category: food & beverage items', 'Column: Price Subtotal (ex-VAT)'])}
-        ${posMrgBxl.YTD > 0.01 ? subRow('Merge Brussels', posMrgBxl, ['Merge Brussels — Odoo POS', 'POS: WoodCutter - Brussels', 'Product category or name contains: merge']) : ''}
-        ${posMrgAnt.YTD > 0.01 ? subRow('Merge Anvers', posMrgAnt, ['Merge Anvers — Odoo POS', 'POS: WoodCutter - Anvers', 'Product category or name contains: merge']) : ''}
-        ${gap()}` : ''}
-
-        ${secRow('Stripe (Card)', strTotal, ['stripe_2026_Belgium_YTD.csv', 'Online transactions only — in-store Stripe already counted in Odoo POS', 'Amount ÷ 1.21 to remove 21% Belgian VAT', 'City split via Odoo pi_ lookup (odoo_pos_belgium_2026_YTD.csv)'])}
-        ${subRow('Brussels', strBxl, ['Brussels — Stripe Online', 'Default city for Belgium file (no Odoo pi_ match = Brussels)', 'Unmatched pi_ = online payments (no POS record) → Brussels is correct', 'Amount ÷ 1.21 · File: stripe_2026_Belgium_YTD.csv'])}
-        ${subRow('Anvers', strAnt, ['Anvers — Stripe Online', 'pi_ ID matched to WoodCutter - Anvers in Odoo POS data', 'Amount ÷ 1.21 · File: stripe_2026_Belgium_YTD.csv'])}
-        ${gap()}
-
-        ${secRow('Tips', tipTotal, ['stripe_2026_Belgium_YTD.csv', 'Column: tip_amount · All transaction types (in-store + online)', 'Tips are not VAT-eligible — no ÷1.21 applied', 'City split via same Odoo pi_ lookup'])}
-        ${subRow('Brussels', tipBxl, ['Tips Brussels', 'tip_amount for Brussels transactions (all types)', 'City via Odoo pi_ lookup · File: stripe_2026_Belgium_YTD.csv'])}
-        ${subRow('Anvers', tipAnt, ['Tips Anvers', 'tip_amount for Anvers transactions (all types)', 'City via Odoo pi_ lookup · File: stripe_2026_Belgium_YTD.csv'])}
-        ${gap()}
-
-        <tr class="recon-tot">
-          <td class="rc-lbl" data-tip-title="TOTAL — Belgium" data-tip-body="Invoices (ex-VAT) + POS (ex-VAT) + Stripe online (÷1.21) + Tips|No double-counting: in-store Stripe = in Odoo POS · online Stripe = not in POS">TOTAL — Belgium</td>
-          ${cols.map((c) => `<td class="rc-amt">${fmt(grandTotal[c])}</td>`).join('')}
-        </tr>
-        ${cityRow('Brussels', bxlTotal, ['Brussels Total', 'Inv Activité BXL + Inv F&B BXL + POS Activité BXL + POS F&B BXL + POS Merge BXL + Stripe BXL + Tips BXL'])}
-        ${cityRow('Anvers', antTotal, ['Anvers Total', 'Inv Activité ANT + Inv F&B ANT + POS Activité ANT + POS F&B ANT + POS Merge ANT + Stripe ANT + Tips ANT'])}
-        ${pctRow('Brussels / Anvers split', bxlTotal, antTotal, grandTotal)}
-      </tbody>
+      <thead><tr>
+        <th class="recon-th-lbl">Revenue Stream</th>
+        ${colLbls.map((l,i)=>`<th class="recon-th-val${i===colLbls.length-1?' ytd':''}">${l}</th>`).join('')}
+      </tr></thead>
+      <tbody>${tableBody}</tbody>
     </table>`;
 
   // Tooltip wiring
@@ -1482,26 +1552,22 @@ function renderRecon() {
   document.querySelectorAll('.rc-lbl[data-tip-title]').forEach(el => {
     el.addEventListener('mouseenter', () => {
       tipTitle.textContent = el.getAttribute('data-tip-title');
-      tipBody.innerHTML = (el.getAttribute('data-tip-body') || '')
-        .split('|').map(line => `<div>${line}</div>`).join('');
+      tipBody.innerHTML = (el.getAttribute('data-tip-body')||'').split('|').map(l=>`<div>${l}</div>`).join('');
       tipBox.style.display = 'block';
     });
     el.addEventListener('mousemove', e => {
-      const x = e.clientX + 16, y = e.clientY - 10;
+      const x = e.clientX+16, y = e.clientY-10;
       const bw = document.documentElement.clientWidth;
-      tipBox.style.left = (x + 380 > bw ? bw - 396 : x) + 'px';
-      tipBox.style.top  = y + 'px';
+      tipBox.style.left = (x+380>bw?bw-396:x)+'px';
+      tipBox.style.top  = y+'px';
     });
     el.addEventListener('mouseleave', () => { tipBox.style.display = 'none'; });
   });
 
-  // Source note
-  const invCount = belgInv.length;
-  const posCount = belgPOS.length;
   document.getElementById('recon-note').textContent =
-    `Sources: ${strBxl.YTD + strAnt.YTD > 0 ? 'Stripe CSV · ' : ''}` +
-    `${posCount > 0 ? posCount + ' Odoo POS rows · ' : ''}` +
-    `${invCount > 0 ? invCount + ' invoice rows' : 'No invoices loaded — run Odoo export & saveFilesToDrive()'}`;
+    `Sources: ${venueStripe.length>0?'Stripe CSV · ':''}` +
+    `${venuePOS.length>0?venuePOS.length+' Odoo POS rows · ':''}` +
+    `${venueInv.length>0?venueInv.length+' invoice rows':'No invoices loaded for '+venue+' — run Odoo export & saveFilesToDrive()'}`;
 }
 
 // ── UTILS ─────────────────────────────────────────────
