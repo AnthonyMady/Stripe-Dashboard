@@ -1473,7 +1473,7 @@ function renderRecon(venue) {
 
     tableBody = `
       ${hasInv ? `
-      ${secRow('Invoices',invTotal,[invFile,'Column: Untaxed Amount Signed Currency (ex-VAT)','Excluded: BRU+ANT-ONLINE SALES · Customer Invoices · Ventes Stripe','Status: posted only · partial = 100%'])}
+      ${secRow('Invoices',invTotal,[invFile,'Column: Untaxed Amount Signed Currency — Odoo exports this field pre-tax, so no divisor needed','Excluded: BRU+ANT-ONLINE SALES · Customer Invoices · Ventes Stripe','Status: posted only · partial = 100%'])}
       ${subRow('Activité Brussels',invActBxl,['Activité Brussels — Invoices','Journal contains: bxl / bruxelles / brussels / bru',`File: ${invFile}`])}
       ${subRow('Activité Anvers',invActAnt,['Activité Anvers — Invoices','Journal contains: ant / anvers / antwerp',`File: ${invFile}`])}
       ${subRow('F&B Brussels',invFnbBxl,['F&B Brussels — Invoices','Journal contains: bxl + food / beverage / f&b / fnb',`File: ${invFile}`])}
@@ -1481,7 +1481,7 @@ function renderRecon(venue) {
       ${invOthBxl.YTD>0.01?subRow('Other Brussels',invOthBxl,['Other Brussels — Invoices',`File: ${invFile}`]):''}
       ${gap()}` : ''}
       ${hasPOS ? `
-      ${secRow('POS (Odoo)',posTotal,[posFile,'Column: Price Subtotal (ex-VAT)','Status: paid / posted / invoiced / done'])}
+      ${secRow('POS (Odoo)',posTotal,[posFile,'Column: Price Subtotal — Odoo\'s subtotal is always before tax, so no divisor needed','Status: paid / posted / invoiced / done'])}
       ${subRow('Activité Brussels',posActBxl,['Activité Brussels — Odoo POS','POS: WoodCutter - Brussels',`File: ${posFile}`])}
       ${subRow('Activité Anvers',posActAnt,['Activité Anvers — Odoo POS','POS: WoodCutter - Anvers',`File: ${posFile}`])}
       ${subRow('F&B Brussels',posFnbBxl,['F&B Brussels — Odoo POS','POS: WoodCutter - Brussels',`File: ${posFile}`])}
@@ -1489,11 +1489,11 @@ function renderRecon(venue) {
       ${posMrgBxl.YTD>0.01?subRow('Merge Brussels',posMrgBxl,['Merge Brussels — Odoo POS',`File: ${posFile}`]):''}
       ${posMrgAnt.YTD>0.01?subRow('Merge Anvers',posMrgAnt,['Merge Anvers — Odoo POS',`File: ${posFile}`]):''}
       ${gap()}` : ''}
-      ${secRow('Stripe (Card)',strTotal,[stripeFile,`Online transactions only · Amount ÷ ${vatDivisor} (excl. 21% Belgian VAT)`,'In-store Stripe already counted in Odoo POS','City split via Odoo pi_ lookup'])}
+      ${secRow('Stripe (Card)',strTotal,[stripeFile,`Online only · Stripe gives the gross amount charged (VAT included) — divided by ${vatDivisor} to strip 21% Belgian VAT`,'In-store Stripe already counted in Odoo POS — excluded here to avoid double-counting','City split via Odoo pi_ lookup'])}
       ${subRow('Brussels',strBxl,['Brussels — Stripe Online',`Amount ÷ ${vatDivisor} · File: ${stripeFile}`])}
       ${subRow('Anvers',strAnt,['Anvers — Stripe Online',`Amount ÷ ${vatDivisor} · File: ${stripeFile}`])}
       ${gap()}
-      ${secRow('Tips',addRows(tipBxl,tipAnt),[stripeFile,'Column: tip_amount · All transaction types','Tips are VAT-exempt — no divisor applied'])}
+      ${secRow('Tips',addRows(tipBxl,tipAnt),[stripeFile,'Column: tip_amount · Tips are VAT-exempt so no divisor is applied · All transaction types'])}
       ${subRow('Brussels',tipBxl,[`Tips Brussels · File: ${stripeFile}`])}
       ${subRow('Anvers',tipAnt,[`Tips Anvers · File: ${stripeFile}`])}
       ${gap()}
@@ -1522,23 +1522,23 @@ function renderRecon(venue) {
 
     tableBody = `
       ${hasInv ? `
-      ${secRow('Invoices',invTotal,[invFile,'Column: Untaxed Amount Signed Currency (ex-VAT)','Status: posted · reversed excluded · partial = 100%'])}
+      ${secRow('Invoices',invTotal,[invFile,'Column: Untaxed Amount Signed Currency — Odoo exports this field pre-tax, so no divisor needed','Status: posted · reversed excluded · partial = 100%'])}
       ${invAct.YTD>0.01?subRow(`Activité ${city}`,invAct,[`Activité ${city} — Invoices`,`File: ${invFile}`]):''}
       ${invFnb.YTD>0.01?subRow(`F&B ${city}`,invFnb,[`F&B ${city} — Invoices`,`File: ${invFile}`]):''}
       ${invOth.YTD>0.01?subRow(`Other ${city}`,invOth,[`Other ${city} — Invoices`,`File: ${invFile}`]):''}
       ${gap()}` : ''}
       ${hasPOS ? `
-      ${secRow('POS (Odoo)',posTotal,[posFile,'Column: Price Subtotal (ex-VAT)','Status: paid / posted / invoiced / done'])}
+      ${secRow('POS (Odoo)',posTotal,[posFile,'Column: Price Subtotal — Odoo\'s subtotal is always before tax, so no divisor needed','Status: paid / posted / invoiced / done'])}
       ${posAct.YTD>0.01?subRow(`Activité ${city}`,posAct,[`Activité ${city} — Odoo POS`,`File: ${posFile}`]):''}
       ${posFnb.YTD>0.01?subRow(`F&B ${city}`,posFnb,[`F&B ${city} — Odoo POS`,`File: ${posFile}`]):''}
       ${posMrg.YTD>0.01?subRow(`Merge ${city}`,posMrg,[`Merge ${city} — Odoo POS`,`File: ${posFile}`]):''}
       ${gap()}` : ''}
       ${strCity.YTD>0.01?`
-      ${secRow('Stripe (Card)',strCity,[stripeFile,`Online only · Amount ÷ ${vatDivisor} (excl. 19% German VAT)`,`File: ${stripeFile}`])}
+      ${secRow('Stripe (Card)',strCity,[stripeFile,`Online only · Stripe gives the gross amount charged (VAT included) — divided by ${vatDivisor} to strip 19% German VAT`,'In-store Stripe already counted in Odoo POS — excluded here to avoid double-counting'])}
       ${subRow(city,strCity,[`${city} — Stripe Online · Amount ÷ ${vatDivisor} · File: ${stripeFile}`])}
       ${gap()}`:''}
       ${tipCity.YTD>0.01?`
-      ${secRow('Tips',tipCity,[stripeFile,'Column: tip_amount · All transaction types · VAT-exempt'])}
+      ${secRow('Tips',tipCity,[stripeFile,'Column: tip_amount · Tips are VAT-exempt so no divisor is applied · All transaction types'])}
       ${subRow(city,tipCity,[`Tips ${city} · File: ${stripeFile}`])}
       ${gap()}`:''}
       <tr class="recon-tot"><td class="rc-lbl" data-tip-title="TOTAL — ${venue}" data-tip-body="Invoices (ex-VAT) + POS (ex-VAT) + Stripe online (÷${vatDivisor}) + Tips">TOTAL — ${venue}</td>${cols.map(c=>`<td class="rc-amt">${fmt(grandTotal[c])}</td>`).join('')}</tr>`;
