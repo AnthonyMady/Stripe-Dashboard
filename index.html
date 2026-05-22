@@ -260,6 +260,16 @@ tr:hover td { background: rgba(255,255,255,0.012); }
 .recon-pct .rc-lbl { font-size: 10px; color: var(--muted); padding-left: 18px !important; position: sticky; left: 0; background: var(--s1); z-index: 2; white-space: nowrap; font-family: 'JetBrains Mono', monospace; }
 .recon-pct .rc-amt { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); }
 .recon-note { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 12px; line-height: 1.7; }
+.recon-charts-section { margin-top: 36px; display: flex; flex-direction: column; gap: 32px; }
+.recon-chart-block { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r); padding: 24px 28px; }
+.recon-chart-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 18px; }
+.target-row { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.target-lbl { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--fg); width: 88px; flex-shrink: 0; }
+.target-track { flex: 1; background: var(--s3); border-radius: 3px; height: 18px; overflow: hidden; position: relative; }
+.target-fill { height: 100%; border-radius: 3px; transition: width 0.7s cubic-bezier(.4,0,.2,1); background: #c0392b; }
+.target-fill.near { background: linear-gradient(90deg, #c0392b, #c8a96e); }
+.target-fill.done { background: #27ae60; }
+.target-vals { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); width: 220px; flex-shrink: 0; text-align: right; }
 .recon-tip {
   position: fixed; z-index: 9999; pointer-events: none; display: none;
   background: var(--s3); border: 1px solid var(--b3); border-radius: 7px;
@@ -388,6 +398,24 @@ tr:hover td { background: rgba(255,255,255,0.012); }
         <div class="recon-tip-line" id="recon-tip-body"></div>
       </div>
       <div class="recon-note" id="recon-note"></div>
+
+      <div class="recon-charts-section">
+        <!-- Annual Target Progress (thermometer) -->
+        <div class="recon-chart-block">
+          <div class="recon-chart-label">Annual Target Progress</div>
+          <div id="recon-targets"></div>
+        </div>
+        <!-- Monthly Revenue Bridge -->
+        <div class="recon-chart-block">
+          <div class="recon-chart-label" id="recon-bridge-label">Monthly Revenue Δ vs Prior Month</div>
+          <div style="position:relative;height:240px"><canvas id="chart-recon-bridge"></canvas></div>
+        </div>
+        <!-- Venue Revenue Profile Radar -->
+        <div class="recon-chart-block">
+          <div class="recon-chart-label">Venue Revenue Profile — All Venues</div>
+          <div style="position:relative;height:340px"><canvas id="chart-recon-radar"></canvas></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -508,6 +536,27 @@ let RAW = [], filtered = [];
 let ODOO_ROWS = [];
 let INVOICE_ROWS = [];
 let currentReconVenue = 'Belgium';
+
+// Annual revenue targets per city/venue (ex-VAT, €)
+const TARGETS = {
+  'Brussels':   1050000,
+  'Anvers':      650000,
+  'Berlin':    1050000,
+  'Frankfurt':  756000,
+};
+
+// Fixed color per venue for radar + charts
+const VENUE_COLORS = {
+  'Belgium':   '#c8a96e',
+  'Brussels':  '#c8a96e',
+  'Anvers':    '#4a7fc4',
+  'Berlin':    '#4a9e6e',
+  'Frankfurt': '#8a6ec4',
+  'Hamburg':   '#c47a4a',
+  'Koln':      '#4abcbc',
+  'Leipzig':   '#bc84c4',
+};
+
 let sortCol = 'date', sortAsc = false;
 let fnbSortCol = 'revenue', fnbSortAsc = false;
 let charts = {};
@@ -1354,6 +1403,199 @@ function onVenueChange() {
   renderRecon(v);
 }
 
+// ── REVENUE SPLIT CHART HELPERS ───────────────────────────────────────────────
+// Compute city-level YTD revenue from global arrays (invoices + POS + Stripe online + tips)
+function cityRevenue(city, vatDiv) {
+  const isSucc = r => r.status === 'paid' || r.status === 'succeeded';
+  const inv       = INVOICE_ROWS.filter(r => r.city === city).reduce((s,r) => s+(r.amount||0), 0);
+  const pos       = ODOO_ROWS.filter(r => r.branch === city).reduce((s,r) => s+(r.revenue||0), 0);
+  const stripeAll = RAW.filter(r => isSucc(r) && r.city === city);
+  const strOnline = stripeAll.filter(r => r.type==='online').reduce((s,r) => s+(r.amount||0)/vatDiv, 0);
+  const tips      = stripeAll.reduce((s,r) => s+(r.tip_amount||0), 0);
+  const total     = inv + pos + strOnline + tips;
+  return { inv, pos, strOnline, tips, total };
+}
+
+// Compute venue-level YTD stats for radar axes
+function venueStats(venue) {
+  const cfg = VENUE_CONFIG[venue] || VENUE_CONFIG['Belgium'];
+  const { vatDiv } = { vatDiv: cfg.vatDivisor };
+  const isSucc = r => r.status === 'paid' || r.status === 'succeeded';
+  let inv=0, pos=0, strOnline=0, tips=0;
+
+  if (venue === 'Belgium') {
+    const bxl = cityRevenue('Brussels', 1.21);
+    const ant = cityRevenue('Anvers',   1.21);
+    inv=bxl.inv+ant.inv; pos=bxl.pos+ant.pos; strOnline=bxl.strOnline+ant.strOnline; tips=bxl.tips+ant.tips;
+  } else {
+    const vd = cfg.vatDivisor;
+    inv       = INVOICE_ROWS.filter(r=>r.venue===venue).reduce((s,r)=>s+(r.amount||0),0);
+    pos       = ODOO_ROWS.filter(r=>r.venue===venue).reduce((s,r)=>s+(r.revenue||0),0);
+    const sa  = RAW.filter(r=>isSucc(r)&&r.city===venue);
+    strOnline = sa.filter(r=>r.type==='online').reduce((s,r)=>s+(r.amount||0)/vd,0);
+    tips      = sa.reduce((s,r)=>s+(r.tip_amount||0),0);
+  }
+  const total = inv + pos + strOnline + tips;
+  return {
+    total,
+    tipRate:    total>0 ? tips/total*100      : 0,
+    onlinePct:  total>0 ? strOnline/total*100 : 0,
+    posPct:     total>0 ? pos/total*100       : 0,
+    invPct:     total>0 ? inv/total*100       : 0,
+  };
+}
+
+// ── RENDER: ANNUAL TARGET THERMOMETERS ────────────────────────────────────────
+function renderTargets() {
+  const entries = [
+    { label: 'Brussels',  current: cityRevenue('Brussels', 1.21).total, target: TARGETS['Brussels']  },
+    { label: 'Anvers',    current: cityRevenue('Anvers',   1.21).total, target: TARGETS['Anvers']    },
+    { label: 'Berlin',    current: venueStats('Berlin').total,           target: TARGETS['Berlin']    },
+    { label: 'Frankfurt', current: venueStats('Frankfurt').total,        target: TARGETS['Frankfurt'] },
+  ];
+  document.getElementById('recon-targets').innerHTML = entries.map(({ label, current, target }) => {
+    const pct     = current / target;
+    const pctClp  = Math.min(pct, 1);
+    const pctDisp = (pct * 100).toFixed(1);
+    const fillCls = pct >= 1 ? 'done' : pct >= 0.75 ? 'near' : '';
+    const remaining = target - current;
+    const remTxt  = pct < 1 ? ` · €${Math.round(remaining).toLocaleString('fr-BE')} to go` : ' · Target reached!';
+    return `
+      <div class="target-row">
+        <div class="target-lbl">${label}</div>
+        <div class="target-track" title="${label}: ${pctDisp}% of €${target.toLocaleString('fr-BE')}">
+          <div class="target-fill ${fillCls}" style="width:${pctClp*100}%"></div>
+        </div>
+        <div class="target-vals">€${Math.round(current).toLocaleString('fr-BE')} / €${target.toLocaleString('fr-BE')} · <strong>${pctDisp}%</strong>${remTxt}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── RENDER: MONTHLY REVENUE BRIDGE (waterfall delta bars) ────────────────────
+function renderBridge(venue, grandTotal, allMonths) {
+  document.getElementById('recon-bridge-label').textContent =
+    `Monthly Revenue Δ vs Prior Month — ${venue}`;
+
+  const deltas = allMonths.map((m, i) => {
+    const curr = grandTotal[m] || 0;
+    const prev = i > 0 ? (grandTotal[allMonths[i-1]] || 0) : 0;
+    return Math.round(curr - prev);
+  });
+  const labels = allMonths.map(m =>
+    new Date(m+'-02').toLocaleDateString('en-GB', {month:'short', year:'2-digit'})
+  );
+  const bgColors     = deltas.map(d => d >= 0 ? 'rgba(200,169,110,0.75)' : 'rgba(192,57,43,0.75)');
+  const borderColors = deltas.map(d => d >= 0 ? '#c8a96e' : '#c0392b');
+
+  if (charts.reconBridge) charts.reconBridge.destroy();
+  charts.reconBridge = new Chart(document.getElementById('chart-recon-bridge'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Δ vs prior month',
+        data: deltas,
+        backgroundColor: bgColors,
+        borderColor: borderColors,
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const v = ctx.raw;
+              return `${v >= 0 ? '+' : ''}${fmtCurShort(v)} vs prior month`;
+            },
+            afterLabel: ctx => {
+              const m = allMonths[ctx.dataIndex];
+              return `Total: ${fmtCurShort(grandTotal[m] || 0)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color:'rgba(255,255,255,0.04)' }, ticks: { color:'#888', font:{ family:"'JetBrains Mono',monospace", size:10 } } },
+        y: { grid: { color:'rgba(255,255,255,0.04)' }, border: { dash:[2,4] },
+          ticks: { color:'#888', font:{ family:"'JetBrains Mono',monospace", size:10 }, callback: v => fmtCurShort(v) } }
+      }
+    }
+  });
+}
+
+// ── RENDER: VENUE RADAR ────────────────────────────────────────────────────────
+function renderVenueRadar() {
+  const venues = ['Belgium','Berlin','Frankfurt','Hamburg','Koln','Leipzig'];
+  const stats  = venues.map(v => venueStats(v));
+
+  // Axis 1: revenue score — normalize to max venue = 100
+  const maxRev = Math.max(...stats.map(s => s.total), 1);
+  const axes   = ['Revenue (relative)','Tip Rate','Online %','POS %','Invoice %'];
+
+  const datasets = venues.map((v, i) => {
+    const s = stats[i];
+    const col = VENUE_COLORS[v] || '#c8a96e';
+    return {
+      label: v,
+      data: [
+        Math.round(s.total / maxRev * 100),
+        Math.round(Math.min(s.tipRate,   25) / 25 * 100),   // tip rate: cap at 25%, scale to 0-100
+        Math.round(Math.min(s.onlinePct, 60) / 60 * 100),   // online %: cap at 60%
+        Math.round(Math.min(s.posPct,    80) / 80 * 100),   // POS %: cap at 80%
+        Math.round(Math.min(s.invPct,    80) / 80 * 100),   // invoice %: cap at 80%
+      ],
+      backgroundColor: col + '28',
+      borderColor: col,
+      pointBackgroundColor: col,
+      pointRadius: 3,
+      borderWidth: 1.5,
+    };
+  }).filter((_,i) => stats[i].total > 0);  // hide venues with no data yet
+
+  if (charts.reconRadar) charts.reconRadar.destroy();
+  charts.reconRadar = new Chart(document.getElementById('chart-recon-radar'), {
+    type: 'radar',
+    data: { labels: axes, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color:'#888', font:{ family:"'JetBrains Mono',monospace", size:10 }, boxWidth:10, padding:16 }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const v    = ctx.dataset.label;
+              const s    = stats[venues.indexOf(v)];
+              const axis = ctx.label;
+              if (axis === 'Revenue (relative)') return `${v}: €${fmtCurShort(s.total)} YTD`;
+              if (axis === 'Tip Rate')    return `${v}: ${s.tipRate.toFixed(1)}% tip rate`;
+              if (axis === 'Online %')    return `${v}: ${s.onlinePct.toFixed(1)}% online revenue`;
+              if (axis === 'POS %')       return `${v}: ${s.posPct.toFixed(1)}% POS revenue`;
+              if (axis === 'Invoice %')   return `${v}: ${s.invPct.toFixed(1)}% invoice revenue`;
+              return ctx.dataset.label;
+            }
+          }
+        }
+      },
+      scales: {
+        r: {
+          min: 0, max: 100,
+          grid:       { color: 'rgba(255,255,255,0.07)' },
+          angleLines: { color: 'rgba(255,255,255,0.07)' },
+          pointLabels: { color:'#aaa', font:{ family:"'JetBrains Mono',monospace", size:10 } },
+          ticks: { display:false, stepSize:25 },
+        }
+      }
+    }
+  });
+}
+
 function renderRecon(venue) {
   venue = venue || currentReconVenue || 'Belgium';
   currentReconVenue = venue;
@@ -1576,6 +1818,11 @@ function renderRecon(venue) {
     `Sources: ${venueStripe.length>0?'Stripe CSV · ':''}` +
     `${venuePOS.length>0?venuePOS.length+' Odoo POS rows · ':''}` +
     `${venueInv.length>0?venueInv.length+' invoice rows':'No invoices loaded for '+venue+' — run Odoo export & saveFilesToDrive()'}`;
+
+  // ── Charts below the table ────────────────────────────────────────────────
+  renderTargets();
+  renderBridge(venue, grandTotal, allMonths);
+  renderVenueRadar();
 }
 
 // ── UTILS ─────────────────────────────────────────────
