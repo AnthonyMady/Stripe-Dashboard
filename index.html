@@ -417,8 +417,12 @@ tr:hover td { background: rgba(255,255,255,0.012); }
           <div class="target-grid" id="recon-targets"></div>
         </div>
         <div class="recon-chart-block">
-          <div class="recon-chart-label" id="city-comparison-label">Revenue vs Tips by City — previous month</div>
-          <div style="position:relative;height:260px"><canvas id="chart-city-comparison"></canvas></div>
+          <div class="recon-chart-label" id="city-tips-label">Tips by City</div>
+          <div style="position:relative;height:220px"><canvas id="chart-city-tips"></canvas></div>
+        </div>
+        <div class="recon-chart-block">
+          <div class="recon-chart-label" id="city-fnb-label">F&amp;B Revenue by City</div>
+          <div style="position:relative;height:220px"><canvas id="chart-city-fnb"></canvas></div>
         </div>
       </div>
     </div>
@@ -1495,96 +1499,89 @@ function renderTargets() {
 }
 
 
-// ── RENDER: CITY REVENUE vs TIPS — PREVIOUS COMPLETED MONTH ──────────────────
-function renderCityComparison() {
-  // Always use the previous completed month — dynamic, no hardcoding
-  const now  = new Date();
-  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const prevMonth  = prev.toISOString().slice(0, 7);  // e.g. "2026-04"
-  const monthLabel = prev.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+// ── SHARED: previous completed month ─────────────────────────────────────────
+function prevMonthKey() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 7);
+}
+function prevMonthLabel() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    .toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+}
 
-  document.getElementById('city-comparison-label').textContent =
-    `Revenue vs Tips by City — ${monthLabel}`;
+// ── RENDER: TIPS PER CITY ────────────────────────────────────────────────────
+function renderCityTips() {
+  const m     = prevMonthKey();
+  const label = prevMonthLabel();
+  document.getElementById('city-tips-label').textContent = `Tips by City — ${label}`;
 
   const isSucc = r => r.status === 'paid' || r.status === 'succeeded';
   const cities = ['Brussels','Anvers','Berlin','Frankfurt','Hamburg','Koln','Leipzig'];
-
-  const revenues = cities.map(city => {
-    const vatDiv = (city === 'Brussels' || city === 'Anvers') ? 1.21 : 1.19;
-    const inv      = INVOICE_ROWS.filter(r => r.city === city && r.month === prevMonth)
-                       .reduce((s,r) => s + (r.amount||0), 0);
-    const pos      = ODOO_ROWS.filter(r => r.branch === city && r.month === prevMonth)
-                       .reduce((s,r) => s + (r.revenue||0), 0);
-    const stripe   = RAW.filter(r => isSucc(r) && r.city === city && r.month === prevMonth);
-    const online   = stripe.filter(r => r.type==='online').reduce((s,r) => s+(r.amount||0)/vatDiv, 0);
-    return Math.round(inv + pos + online);
-  });
-
-  const tips = cities.map(city =>
-    Math.round(RAW.filter(r => isSucc(r) && r.city === city && r.month === prevMonth)
+  const data   = cities.map(city =>
+    Math.round(RAW.filter(r => isSucc(r) && r.city === city && r.month === m)
       .reduce((s,r) => s + (r.tip_amount||0), 0))
   );
 
-  // Only show cities that have any data
-  const active = cities.map((c,i) => revenues[i] > 0 || tips[i] > 0);
-  const lbls   = cities.filter((_,i) => active[i]);
-  const revs   = revenues.filter((_,i) => active[i]);
-  const tipArr = tips.filter((_,i) => active[i]);
+  const active  = cities.map((_,i) => data[i] > 0);
+  const lbls    = cities.filter((_,i) => active[i]);
+  const vals    = data.filter((_,i) => active[i]);
+  const colors  = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c47a4a','#4abcbc','#bc84c4'];
+  const bgColors = lbls.map((_,i) => colors[i % colors.length] + 'bb');
+  const bdColors = lbls.map((_,i) => colors[i % colors.length]);
 
-  if (charts.cityComp) charts.cityComp.destroy();
-  charts.cityComp = new Chart(document.getElementById('chart-city-comparison'), {
+  if (charts.cityTips) charts.cityTips.destroy();
+  charts.cityTips = new Chart(document.getElementById('chart-city-tips'), {
     type: 'bar',
-    data: {
-      labels: lbls,
-      datasets: [
-        {
-          label: 'Revenue (ex-VAT)',
-          data: revs,
-          backgroundColor: 'rgba(200,169,110,0.75)',
-          borderColor: '#c8a96e',
-          borderWidth: 1,
-          borderRadius: 4,
-          yAxisID: 'y',
-        },
-        {
-          label: 'Tips',
-          data: tipArr,
-          backgroundColor: 'rgba(74,127,196,0.7)',
-          borderColor: '#4a7fc4',
-          borderWidth: 1,
-          borderRadius: 4,
-          yAxisID: 'yTip',
-        }
-      ]
-    },
+    data: { labels: lbls, datasets: [{ label:'Tips', data:vals, backgroundColor:bgColors, borderColor:bdColors, borderWidth:1, borderRadius:4 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: {
-          position: 'top',
-          labels: { color:'#888', font:{ family:"'JetBrains Mono',monospace", size:10 }, boxWidth:10, padding:16 }
-        },
-        tooltip: {
-          callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtCurShort(ctx.raw)}` }
-        }
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `Tips: ${fmtCurShort(ctx.raw)}` } }
       },
       scales: {
-        x: {
-          grid: { color:'rgba(255,255,255,0.04)' },
-          ticks: { color:'#888', font:{ family:"'JetBrains Mono',monospace", size:10 } }
-        },
-        y: {
-          position: 'left',
-          grid: { color:'rgba(255,255,255,0.04)' }, border: { dash:[2,4] },
-          ticks: { color:'#c8a96e', font:{ family:"'JetBrains Mono',monospace", size:10 }, callback: v => fmtCurShort(v) },
-          title: { display:true, text:'Revenue', color:'#c8a96e', font:{ family:"'JetBrains Mono',monospace", size:9 } }
-        },
-        yTip: {
-          position: 'right',
-          grid: { drawOnChartArea: false },
-          ticks: { color:'#4a7fc4', font:{ family:"'JetBrains Mono',monospace", size:10 }, callback: v => fmtCurShort(v) },
-          title: { display:true, text:'Tips', color:'#4a7fc4', font:{ family:"'JetBrains Mono',monospace", size:9 } }
-        }
+        x: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}} },
+        y: { grid:{color:'rgba(255,255,255,0.04)'}, border:{dash:[2,4]}, beginAtZero:true,
+             ticks:{color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}, callback: v => fmtCurShort(v)} }
+      }
+    }
+  });
+}
+
+// ── RENDER: F&B REVENUE PER CITY ─────────────────────────────────────────────
+function renderCityFnb() {
+  const m     = prevMonthKey();
+  const label = prevMonthLabel();
+  document.getElementById('city-fnb-label').textContent = `F&B Revenue by City — ${label}`;
+
+  const cities = ['Brussels','Anvers','Berlin','Frankfurt','Hamburg','Koln','Leipzig'];
+  const data   = cities.map(city =>
+    Math.round(ODOO_ROWS.filter(r => isFnB(r) && r.branch === city && r.month === m)
+      .reduce((s,r) => s + (r.revenue||0), 0))
+  );
+
+  const active  = cities.map((_,i) => data[i] > 0);
+  const lbls    = cities.filter((_,i) => active[i]);
+  const vals    = data.filter((_,i) => active[i]);
+  const colors  = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c47a4a','#4abcbc','#bc84c4'];
+  const bgColors = lbls.map((_,i) => colors[i % colors.length] + 'bb');
+  const bdColors = lbls.map((_,i) => colors[i % colors.length]);
+
+  if (charts.cityFnb) charts.cityFnb.destroy();
+  charts.cityFnb = new Chart(document.getElementById('chart-city-fnb'), {
+    type: 'bar',
+    data: { labels: lbls, datasets: [{ label:'F&B Revenue', data:vals, backgroundColor:bgColors, borderColor:bdColors, borderWidth:1, borderRadius:4 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `F&B: ${fmtCurShort(ctx.raw)}` } }
+      },
+      scales: {
+        x: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}} },
+        y: { grid:{color:'rgba(255,255,255,0.04)'}, border:{dash:[2,4]}, beginAtZero:true,
+             ticks:{color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}, callback: v => fmtCurShort(v)} }
       }
     }
   });
@@ -1815,7 +1812,8 @@ function renderRecon(venue) {
 
   // ── Charts below the table ────────────────────────────────────────────────
   renderTargets();
-  renderCityComparison();
+  renderCityTips();
+  renderCityFnb();
 }
 
 // ── UTILS ─────────────────────────────────────────────
