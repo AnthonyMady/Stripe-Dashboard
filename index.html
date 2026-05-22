@@ -264,7 +264,7 @@ tr:hover td { background: rgba(255,255,255,0.012); }
 .recon-chart-block { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r); padding: 24px 28px; }
 .recon-chart-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 20px; }
 /* Target progress cards */
-.target-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.target-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .target-card { background: var(--s2); border: 1px solid var(--b1); border-radius: 10px; padding: 18px 20px; position: relative; overflow: hidden; }
 .target-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
 .target-city { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted2); }
@@ -413,8 +413,12 @@ tr:hover td { background: rgba(255,255,255,0.012); }
 
       <div class="recon-charts-section">
         <div class="recon-chart-block">
-          <div class="recon-chart-label" id="recon-target-label">Annual Target Progress</div>
+          <div class="recon-chart-label">Annual Target Progress</div>
           <div class="target-grid" id="recon-targets"></div>
+        </div>
+        <div class="recon-chart-block">
+          <div class="recon-chart-label" id="city-comparison-label">Revenue vs Tips by City — previous month</div>
+          <div style="position:relative;height:260px"><canvas id="chart-city-comparison"></canvas></div>
         </div>
       </div>
     </div>
@@ -1454,23 +1458,14 @@ function venueStats(venue) {
 }
 
 // ── RENDER: ANNUAL TARGET CARDS ───────────────────────────────────────────────
-function renderTargets(venue) {
-  venue = venue || 'Belgium';
-
-  // Determine which entries to show based on current venue
-  let entries;
-  if (venue === 'Belgium') {
-    entries = [
-      { label: 'Brussels', current: cityRevenue('Brussels', 1.21).total, target: TARGETS['Brussels'] },
-      { label: 'Anvers',   current: cityRevenue('Anvers',   1.21).total, target: TARGETS['Anvers']   },
-    ];
-  } else if (TARGETS[venue] !== undefined) {
-    entries = [{ label: venue, current: venueStats(venue).total, target: TARGETS[venue] }];
-  } else {
-    document.getElementById('recon-targets').innerHTML =
-      `<div class="target-no-data">No annual target set for ${venue}</div>`;
-    return;
-  }
+function renderTargets() {
+  // Always show all 4 targets: Brussels + Anvers top row, Berlin + Frankfurt bottom row
+  const entries = [
+    { label: 'Brussels',  current: cityRevenue('Brussels', 1.21).total, target: TARGETS['Brussels']  },
+    { label: 'Anvers',    current: cityRevenue('Anvers',   1.21).total, target: TARGETS['Anvers']    },
+    { label: 'Berlin',    current: venueStats('Berlin').total,           target: TARGETS['Berlin']    },
+    { label: 'Frankfurt', current: venueStats('Frankfurt').total,        target: TARGETS['Frankfurt'] },
+  ];
 
   document.getElementById('recon-targets').innerHTML = entries.map(({ label, current, target }) => {
     const pct    = current / target;
@@ -1499,6 +1494,101 @@ function renderTargets(venue) {
   }).join('');
 }
 
+
+// ── RENDER: CITY REVENUE vs TIPS — PREVIOUS COMPLETED MONTH ──────────────────
+function renderCityComparison() {
+  // Always use the previous completed month — dynamic, no hardcoding
+  const now  = new Date();
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMonth  = prev.toISOString().slice(0, 7);  // e.g. "2026-04"
+  const monthLabel = prev.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+  document.getElementById('city-comparison-label').textContent =
+    `Revenue vs Tips by City — ${monthLabel}`;
+
+  const isSucc = r => r.status === 'paid' || r.status === 'succeeded';
+  const cities = ['Brussels','Anvers','Berlin','Frankfurt','Hamburg','Koln','Leipzig'];
+
+  const revenues = cities.map(city => {
+    const vatDiv = (city === 'Brussels' || city === 'Anvers') ? 1.21 : 1.19;
+    const inv      = INVOICE_ROWS.filter(r => r.city === city && r.month === prevMonth)
+                       .reduce((s,r) => s + (r.amount||0), 0);
+    const pos      = ODOO_ROWS.filter(r => r.branch === city && r.month === prevMonth)
+                       .reduce((s,r) => s + (r.revenue||0), 0);
+    const stripe   = RAW.filter(r => isSucc(r) && r.city === city && r.month === prevMonth);
+    const online   = stripe.filter(r => r.type==='online').reduce((s,r) => s+(r.amount||0)/vatDiv, 0);
+    return Math.round(inv + pos + online);
+  });
+
+  const tips = cities.map(city =>
+    Math.round(RAW.filter(r => isSucc(r) && r.city === city && r.month === prevMonth)
+      .reduce((s,r) => s + (r.tip_amount||0), 0))
+  );
+
+  // Only show cities that have any data
+  const active = cities.map((c,i) => revenues[i] > 0 || tips[i] > 0);
+  const lbls   = cities.filter((_,i) => active[i]);
+  const revs   = revenues.filter((_,i) => active[i]);
+  const tipArr = tips.filter((_,i) => active[i]);
+
+  if (charts.cityComp) charts.cityComp.destroy();
+  charts.cityComp = new Chart(document.getElementById('chart-city-comparison'), {
+    type: 'bar',
+    data: {
+      labels: lbls,
+      datasets: [
+        {
+          label: 'Revenue (ex-VAT)',
+          data: revs,
+          backgroundColor: 'rgba(200,169,110,0.75)',
+          borderColor: '#c8a96e',
+          borderWidth: 1,
+          borderRadius: 4,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Tips',
+          data: tipArr,
+          backgroundColor: 'rgba(74,127,196,0.7)',
+          borderColor: '#4a7fc4',
+          borderWidth: 1,
+          borderRadius: 4,
+          yAxisID: 'yTip',
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color:'#888', font:{ family:"'JetBrains Mono',monospace", size:10 }, boxWidth:10, padding:16 }
+        },
+        tooltip: {
+          callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtCurShort(ctx.raw)}` }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color:'rgba(255,255,255,0.04)' },
+          ticks: { color:'#888', font:{ family:"'JetBrains Mono',monospace", size:10 } }
+        },
+        y: {
+          position: 'left',
+          grid: { color:'rgba(255,255,255,0.04)' }, border: { dash:[2,4] },
+          ticks: { color:'#c8a96e', font:{ family:"'JetBrains Mono',monospace", size:10 }, callback: v => fmtCurShort(v) },
+          title: { display:true, text:'Revenue', color:'#c8a96e', font:{ family:"'JetBrains Mono',monospace", size:9 } }
+        },
+        yTip: {
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: { color:'#4a7fc4', font:{ family:"'JetBrains Mono',monospace", size:10 }, callback: v => fmtCurShort(v) },
+          title: { display:true, text:'Tips', color:'#4a7fc4', font:{ family:"'JetBrains Mono',monospace", size:9 } }
+        }
+      }
+    }
+  });
+}
 
 function renderRecon(venue) {
   venue = venue || currentReconVenue || 'Belgium';
@@ -1724,7 +1814,8 @@ function renderRecon(venue) {
     `${venueInv.length>0?venueInv.length+' invoice rows':'No invoices loaded for '+venue+' — run Odoo export & saveFilesToDrive()'}`;
 
   // ── Charts below the table ────────────────────────────────────────────────
-  renderTargets(venue);
+  renderTargets();
+  renderCityComparison();
 }
 
 // ── UTILS ─────────────────────────────────────────────
