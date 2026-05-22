@@ -562,6 +562,12 @@ async function loadData() {
     ODOO_ROWS = [];
     for (const file of odooFiles) {
       const content = await driveDownload(file.id);
+      // Validate the download looks like CSV before trusting it
+      const firstLine = content.trim().split('\n')[0] || '';
+      if (!firstLine.toLowerCase().includes('date') && !firstLine.toLowerCase().includes('order')) {
+        console.warn(`Skipping ${file.name} — does not look like a valid CSV (first line: ${firstLine.slice(0, 80)})`);
+        continue;
+      }
       parseOdooMapping(content, odooMap);
       const odooRows = parseOdooFull(content, file.name);
       ODOO_ROWS = ODOO_ROWS.concat(odooRows);
@@ -692,10 +698,12 @@ function parseOdooFull(content, filename) {
 // ── DRIVE ─────────────────────────────────────────────
 async function driveApi(path) {
   const res = await fetch(`https://www.googleapis.com/drive/v3/${path}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok) throw new Error(`Drive API error ${res.status}: ${path}`);
   return res.json();
 }
 async function driveDownload(fileId) {
   const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok) throw new Error(`Drive download error ${res.status} for file ${fileId} — your Google account may not have access to this Drive folder`);
   return res.text();
 }
 
