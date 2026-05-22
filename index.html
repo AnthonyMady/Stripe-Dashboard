@@ -416,13 +416,15 @@ tr:hover td { background: rgba(255,255,255,0.012); }
           <div class="recon-chart-label">Annual Target Progress</div>
           <div class="target-grid" id="recon-targets"></div>
         </div>
-        <div class="recon-chart-block">
-          <div class="recon-chart-label" id="city-tips-label">Tips by City</div>
-          <div style="position:relative;height:220px"><canvas id="chart-city-tips"></canvas></div>
-        </div>
-        <div class="recon-chart-block">
-          <div class="recon-chart-label" id="city-fnb-label">F&amp;B Revenue by City</div>
-          <div style="position:relative;height:220px"><canvas id="chart-city-fnb"></canvas></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="recon-chart-block" style="margin:0">
+            <div class="recon-chart-label" id="city-tips-label">Tips by City</div>
+            <div style="position:relative;height:240px"><canvas id="chart-city-tips"></canvas></div>
+          </div>
+          <div class="recon-chart-block" style="margin:0">
+            <div class="recon-chart-label" id="city-fnb-label">F&amp;B Revenue by City</div>
+            <div style="position:relative;height:240px"><canvas id="chart-city-fnb"></canvas></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1526,14 +1528,11 @@ function renderCityTips() {
   const active  = cities.map((_,i) => data[i] > 0);
   const lbls    = cities.filter((_,i) => active[i]);
   const vals    = data.filter((_,i) => active[i]);
-  const colors  = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c47a4a','#4abcbc','#bc84c4'];
-  const bgColors = lbls.map((_,i) => colors[i % colors.length] + 'bb');
-  const bdColors = lbls.map((_,i) => colors[i % colors.length]);
 
   if (charts.cityTips) charts.cityTips.destroy();
   charts.cityTips = new Chart(document.getElementById('chart-city-tips'), {
     type: 'bar',
-    data: { labels: lbls, datasets: [{ label:'Tips', data:vals, backgroundColor:bgColors, borderColor:bdColors, borderWidth:1, borderRadius:4 }] },
+    data: { labels: lbls, datasets: [{ label:'Tips', data:vals, backgroundColor:'rgba(200,169,110,0.7)', borderColor:'#c8a96e', borderWidth:1, borderRadius:3 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
@@ -1564,14 +1563,11 @@ function renderCityFnb() {
   const active  = cities.map((_,i) => data[i] > 0);
   const lbls    = cities.filter((_,i) => active[i]);
   const vals    = data.filter((_,i) => active[i]);
-  const colors  = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c47a4a','#4abcbc','#bc84c4'];
-  const bgColors = lbls.map((_,i) => colors[i % colors.length] + 'bb');
-  const bdColors = lbls.map((_,i) => colors[i % colors.length]);
 
   if (charts.cityFnb) charts.cityFnb.destroy();
   charts.cityFnb = new Chart(document.getElementById('chart-city-fnb'), {
     type: 'bar',
-    data: { labels: lbls, datasets: [{ label:'F&B Revenue', data:vals, backgroundColor:bgColors, borderColor:bdColors, borderWidth:1, borderRadius:4 }] },
+    data: { labels: lbls, datasets: [{ label:'F&B Revenue', data:vals, backgroundColor:'rgba(107,140,174,0.7)', borderColor:'#6b8cae', borderWidth:1, borderRadius:3 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
