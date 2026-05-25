@@ -426,6 +426,25 @@ tr:hover td { background: rgba(255,255,255,0.012); }
             <div style="position:relative;height:240px"><canvas id="chart-city-fnb"></canvas></div>
           </div>
         </div>
+
+        <!-- YTD Pace vs Target -->
+        <div class="recon-chart-block">
+          <div class="recon-chart-label" id="pace-label">YTD Revenue Pace vs Annual Target</div>
+          <div style="position:relative;height:260px"><canvas id="chart-pace"></canvas></div>
+        </div>
+
+        <!-- Revenue Stream Donut + Invoice Pipeline side by side -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="recon-chart-block" style="margin:0">
+            <div class="recon-chart-label">Revenue Stream Composition</div>
+            <div style="position:relative;height:260px"><canvas id="chart-stream-donut"></canvas></div>
+          </div>
+          <div class="recon-chart-block" style="margin:0">
+            <div class="recon-chart-label" id="pipeline-label">Invoice Payment Pipeline</div>
+            <div style="position:relative;height:260px"><canvas id="chart-invoice-pipeline"></canvas></div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -1381,6 +1400,7 @@ function parseInvoiceFull(content, venue) {
   const dateIdx    = headers.findIndex(h => h.toLowerCase().includes('date'));
   const journalIdx = headers.findIndex(h => h.toLowerCase().includes('journal'));
   const totalIdx   = headers.findIndex(h => h.toLowerCase().includes('untaxed amount'));
+  const statusIdx  = headers.findIndex(h => h.toLowerCase().includes('status'));
 
   if (dateIdx === -1 || journalIdx === -1 || totalIdx === -1) return [];
 
@@ -1388,9 +1408,10 @@ function parseInvoiceFull(content, venue) {
   for (let i = 1; i < lines.length; i++) {
     const vals = parseLine(lines[i], delim);
     if (vals.length < 3) continue;
-    const dateStr = (vals[dateIdx]    || '').trim().replace(/^"|"$/g, '');
-    const journal = (vals[journalIdx] || '').trim().replace(/^"|"$/g, '');
-    const totStr  = (vals[totalIdx]   || '').trim().replace(/^"|"$/g, '');
+    const dateStr      = (vals[dateIdx]    || '').trim().replace(/^"|"$/g, '');
+    const journal      = (vals[journalIdx] || '').trim().replace(/^"|"$/g, '');
+    const totStr       = (vals[totalIdx]   || '').trim().replace(/^"|"$/g, '');
+    const paymentStatus = statusIdx >= 0 ? (vals[statusIdx] || '').trim().replace(/^"|"$/g, '') : '';
     const amount  = parseFloat(totStr.replace(',', '.')) || 0;
     const month   = dateStr.length >= 7 ? dateStr.substring(0, 7) : '';
     if (!month || amount <= 0) continue;
@@ -1410,9 +1431,154 @@ function parseInvoiceFull(content, venue) {
     // Category from journal name keywords (applies to all venues)
     const category = (jl.includes('food') || jl.includes('beverage') || jl.includes('f&b') || jl.includes('fnb')) ? 'F&B' : 'Activité';
 
-    rows.push({ month, city, venue, category, journal, amount });
+    rows.push({ month, city, venue, category, journal, amount, paymentStatus });
   }
   return rows;
+}
+
+// ── PRESENTATION CHARTS ───────────────────────────────────────────────────────
+
+// Chart 1: YTD Pace vs Annual Target
+function renderPaceChart(venue, grandTotal, allMonths) {
+  const year = new Date().getFullYear();
+  const allYear = Array.from({length:12}, (_,i) => `${year}-${String(i+1).padStart(2,'0')}`);
+  const labels  = allYear.map(m => new Date(m+'-02').toLocaleDateString('en-GB',{month:'short'}));
+
+  // Venue total target
+  const venueTgt = venue === 'Belgium'
+    ? (TARGETS['Brussels']||0) + (TARGETS['Anvers']||0)
+    : (TARGETS[venue] || null);
+
+  // Cumulative actual — only months with data
+  let cum = 0;
+  const actualData = allYear.map(m => {
+    if (grandTotal[m] !== undefined) { cum += grandTotal[m]; return Math.round(cum); }
+    return null;
+  });
+
+  // Target pace line — linear Jan→Dec to annual target
+  const paceData = venueTgt
+    ? allYear.map((_,i) => Math.round(venueTgt / 12 * (i + 1)))
+    : null;
+
+  const datasets = [];
+  if (paceData) datasets.push({
+    label: 'Target pace',
+    data: paceData,
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderDash: [5,4],
+    borderWidth: 1.5,
+    pointRadius: 0,
+    fill: false,
+    tension: 0,
+  });
+  datasets.push({
+    label: 'Actual (cumulative)',
+    data: actualData,
+    borderColor: '#c8a96e',
+    backgroundColor: 'rgba(200,169,110,0.08)',
+    borderWidth: 2,
+    pointRadius: 3,
+    pointBackgroundColor: '#c8a96e',
+    fill: true,
+    tension: 0.3,
+    spanGaps: false,
+  });
+
+  document.getElementById('pace-label').textContent =
+    `YTD Revenue Pace vs Annual Target — ${venue}` +
+    (venueTgt ? ` (target €${venueTgt.toLocaleString('fr-BE')})` : ' — no target set');
+
+  if (charts.pace) charts.pace.destroy();
+  charts.pace = new Chart(document.getElementById('chart-pace'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position:'top', labels:{ color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}, boxWidth:10, padding:16 } },
+        tooltip: { callbacks:{ label: ctx => `${ctx.dataset.label}: ${fmtCurShort(ctx.raw)}` } }
+      },
+      scales: {
+        x: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}} },
+        y: { grid:{color:'rgba(255,255,255,0.04)'}, border:{dash:[2,4]}, beginAtZero:true,
+             ticks:{color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}, callback: v => fmtCurShort(v)} }
+      }
+    }
+  });
+}
+
+// Chart 2: Revenue Stream Composition Donut
+function renderStreamDonut(invTotal, posTotal, strTotal, tipTotal) {
+  const segments = [
+    { label:'Invoices',     value: Math.round(invTotal.YTD||0), color:'#c8a96e' },
+    { label:'POS (Odoo)',   value: Math.round(posTotal.YTD||0), color:'#6b8cae' },
+    { label:'Stripe Online',value: Math.round(strTotal.YTD||0), color:'#4a9e6e' },
+    { label:'Tips',         value: Math.round(tipTotal.YTD||0), color:'#8a6ec4' },
+  ].filter(s => s.value > 0);
+
+  if (charts.streamDonut) charts.streamDonut.destroy();
+  charts.streamDonut = new Chart(document.getElementById('chart-stream-donut'), {
+    type: 'doughnut',
+    data: {
+      labels: segments.map(s => s.label),
+      datasets: [{ data: segments.map(s => s.value), backgroundColor: segments.map(s => s.color+'bb'),
+                   borderColor: segments.map(s => s.color), borderWidth: 1, hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: { position:'bottom', labels:{ color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}, boxWidth:10, padding:14 } },
+        tooltip: { callbacks: { label: ctx => {
+          const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+          return `${ctx.label}: ${fmtCurShort(ctx.raw)} (${(ctx.raw/total*100).toFixed(1)}%)`;
+        }}}
+      }
+    }
+  });
+}
+
+// Chart 4: Invoice Payment Pipeline
+function renderInvoicePipeline(venue) {
+  const venueInv = INVOICE_ROWS.filter(r => r.venue === venue);
+  const groups   = { 'Paid':0, 'In Payment':0, 'Not Paid':0, 'Partial':0 };
+  venueInv.forEach(r => {
+    const s = r.paymentStatus || '';
+    if      (s === 'Paid')       groups['Paid']       += r.amount;
+    else if (s === 'In Payment') groups['In Payment'] += r.amount;
+    else if (s === 'Not Paid')   groups['Not Paid']   += r.amount;
+    else if (s === 'Partial')    groups['Partial']    += r.amount;
+  });
+
+  const order  = ['Paid','In Payment','Not Paid','Partial'];
+  const colors = { 'Paid':'#4a9e6e', 'In Payment':'#c8a96e', 'Not Paid':'#c0392b', 'Partial':'#8a6ec4' };
+  const active = order.filter(k => groups[k] > 0.5);
+
+  document.getElementById('pipeline-label').textContent = `Invoice Payment Pipeline — ${venue}`;
+
+  if (charts.invoicePipeline) charts.invoicePipeline.destroy();
+  charts.invoicePipeline = new Chart(document.getElementById('chart-invoice-pipeline'), {
+    type: 'doughnut',
+    data: {
+      labels: active,
+      datasets: [{ data: active.map(k => Math.round(groups[k])),
+                   backgroundColor: active.map(k => colors[k]+'bb'),
+                   borderColor: active.map(k => colors[k]),
+                   borderWidth: 1, hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: { position:'bottom', labels:{ color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}, boxWidth:10, padding:14 } },
+        tooltip: { callbacks: { label: ctx => {
+          const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+          return `${ctx.label}: ${fmtCurShort(ctx.raw)} (${(ctx.raw/total*100).toFixed(1)}%)`;
+        }}}
+      }
+    }
+  });
 }
 
 // ── REVENUE SPLIT (RECONCILIATION) ───────────────────
@@ -1810,6 +1976,9 @@ function renderRecon(venue) {
   renderTargets();
   renderCityTips();
   renderCityFnb();
+  renderPaceChart(venue, grandTotal, allMonths);
+  renderStreamDonut(invTotal, posTotal, strTotal, tipTotal);
+  renderInvoicePipeline(venue);
 }
 
 // ── UTILS ─────────────────────────────────────────────
