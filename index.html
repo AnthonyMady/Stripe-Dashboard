@@ -1443,54 +1443,82 @@ function parseInvoiceFull(content, venue) {
 
 // Chart 1: YTD Pace vs Annual Target
 function renderPaceChart(venue, grandTotal, allMonths) {
-  const year = new Date().getFullYear();
-  const allYear = Array.from({length:12}, (_,i) => `${year}-${String(i+1).padStart(2,'0')}`);
-  const labels  = allYear.map(m => new Date(m+'-02').toLocaleDateString('en-GB',{month:'short'}));
+  const year     = new Date().getFullYear();
+  const now      = new Date();
+  const curMonth = `${year}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const allYear  = Array.from({length:12}, (_,i) => `${year}-${String(i+1).padStart(2,'0')}`);
+  const labels   = allYear.map(m => new Date(m+'-02').toLocaleDateString('en-GB',{month:'short'}));
 
-  // Venue total target
-  const venueTgt = venue === 'Belgium'
-    ? (TARGETS['Brussels']||0) + (TARGETS['Anvers']||0)
-    : (TARGETS[venue] || null);
+  // Helper: cumulative series from a month→value map, stops at current month
+  function cumLine(monthMap) {
+    let c = 0;
+    return allYear.map(m => {
+      if (m > curMonth) return null;
+      c += (monthMap[m] || 0);
+      return Math.round(c);
+    });
+  }
 
-  // Cumulative actual — only months with data
-  let cum = 0;
-  const actualData = allYear.map(m => {
-    if (grandTotal[m] !== undefined) { cum += grandTotal[m]; return Math.round(cum); }
-    return null;
-  });
-
-  // Target pace line — linear Jan→Dec to annual target
-  const paceData = venueTgt
-    ? allYear.map((_,i) => Math.round(venueTgt / 12 * (i + 1)))
-    : null;
+  // Helper: build month→revenue from raw data for one city
+  function cityMonthly(city, vatDiv) {
+    const map = {};
+    allYear.forEach(m => map[m] = 0);
+    const isSucc = r => r.status === 'paid' || r.status === 'succeeded';
+    INVOICE_ROWS.filter(r => r.city === city).forEach(r => {
+      if (map[r.month] !== undefined) map[r.month] += (r.amount || 0);
+    });
+    ODOO_ROWS.filter(r => r.branch === city).forEach(r => {
+      if (map[r.month] !== undefined) map[r.month] += (r.revenue || 0);
+    });
+    RAW.filter(r => isSucc(r) && r.city === city).forEach(r => {
+      if (map[r.month] === undefined) return;
+      if (r.type === 'online') map[r.month] += (r.amount || 0) / vatDiv;
+      map[r.month] += (r.tip_amount || 0);
+    });
+    return map;
+  }
 
   const datasets = [];
-  if (paceData) datasets.push({
-    label: 'Target pace',
-    data: paceData,
-    borderColor: 'rgba(255,255,255,0.2)',
-    borderDash: [5,4],
-    borderWidth: 1.5,
-    pointRadius: 0,
-    fill: false,
-    tension: 0,
-  });
-  datasets.push({
-    label: 'Actual (cumulative)',
-    data: actualData,
-    borderColor: '#c8a96e',
-    backgroundColor: 'rgba(200,169,110,0.08)',
-    borderWidth: 2,
-    pointRadius: 3,
-    pointBackgroundColor: '#c8a96e',
-    fill: true,
-    tension: 0.3,
-    spanGaps: false,
-  });
 
-  document.getElementById('pace-label').textContent =
-    `YTD Revenue Pace vs Annual Target — ${venue}` +
-    (venueTgt ? ` (target €${venueTgt.toLocaleString('fr-BE')})` : ' — no target set');
+  if (venue === 'Belgium') {
+    // Belgium → split into Brussels and Anvers with their own targets
+    const bxlMap = cityMonthly('Brussels', 1.21);
+    const antMap = cityMonthly('Anvers',   1.21);
+    if (TARGETS['Brussels']) datasets.push({
+      label: 'Brussels target', data: allYear.map((_,i) => Math.round(TARGETS['Brussels']/12*(i+1))),
+      borderColor:'rgba(200,169,110,0.25)', borderDash:[5,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0,
+    });
+    if (TARGETS['Anvers']) datasets.push({
+      label: 'Anvers target', data: allYear.map((_,i) => Math.round(TARGETS['Anvers']/12*(i+1))),
+      borderColor:'rgba(107,140,174,0.25)', borderDash:[5,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0,
+    });
+    datasets.push({
+      label: 'Brussels (actual)', data: cumLine(bxlMap),
+      borderColor:'#c8a96e', backgroundColor:'rgba(200,169,110,0.08)',
+      borderWidth:2, pointRadius:3, pointBackgroundColor:'#c8a96e', fill:true, tension:0.3, spanGaps:false,
+    });
+    datasets.push({
+      label: 'Anvers (actual)', data: cumLine(antMap),
+      borderColor:'#6b8cae', backgroundColor:'rgba(107,140,174,0.05)',
+      borderWidth:2, pointRadius:3, pointBackgroundColor:'#6b8cae', fill:false, tension:0.3, spanGaps:false,
+    });
+    document.getElementById('pace-label').textContent = 'YTD Revenue Pace vs Annual Target — Brussels & Anvers';
+  } else {
+    // Single-venue
+    const venueTgt = TARGETS[venue] || null;
+    if (venueTgt) datasets.push({
+      label: 'Target pace', data: allYear.map((_,i) => Math.round(venueTgt/12*(i+1))),
+      borderColor:'rgba(255,255,255,0.2)', borderDash:[5,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0,
+    });
+    datasets.push({
+      label: 'Actual (cumulative)', data: cumLine(grandTotal),
+      borderColor:'#c8a96e', backgroundColor:'rgba(200,169,110,0.08)',
+      borderWidth:2, pointRadius:3, pointBackgroundColor:'#c8a96e', fill:true, tension:0.3, spanGaps:false,
+    });
+    document.getElementById('pace-label').textContent =
+      `YTD Revenue Pace vs Annual Target — ${venue}` +
+      (venueTgt ? ` (target €${venueTgt.toLocaleString('fr-BE')})` : ' — no target set');
+  }
 
   if (charts.pace) charts.pace.destroy();
   charts.pace = new Chart(document.getElementById('chart-pace'), {
