@@ -368,7 +368,7 @@ tr:hover td { background: rgba(255,255,255,0.012); }
       <option value="paid">Paid</option>
       <option value="failed">Failed</option>
       <option value="refunded">Refunded</option>
-      <option value="canceled">Canceled</option>
+      <option value="succeeded">Succeeded</option>
     </select>
     <select id="f-type" onchange="applyFilters()">
       <option value="">All types</option>
@@ -399,6 +399,7 @@ tr:hover td { background: rgba(255,255,255,0.012); }
             <option value="Hamburg">Hamburg</option>
             <option value="Koln">Koln</option>
             <option value="Leipzig">Leipzig</option>
+            <option value="Shooters Brussels">Shooters Brussels</option>
           </select>
         </div>
       </div>
@@ -552,12 +553,13 @@ const FOUNDERS = ['anthony.mady.work@gmail.com', 'julien.vandenitte.work@gmail.c
 // vatDivisor: used to strip VAT from Stripe online amounts (BE=21%, DE=19%)
 // cities: ['Brussels','Anvers'] for Belgium (dual-city), [venue] for German single-city
 const VENUE_CONFIG = {
-  'Belgium':   { vatDivisor: 1.21, cities: ['Brussels', 'Anvers'] },
-  'Berlin':    { vatDivisor: 1.19, cities: ['Berlin']    },
-  'Frankfurt': { vatDivisor: 1.19, cities: ['Frankfurt'] },
-  'Hamburg':   { vatDivisor: 1.19, cities: ['Hamburg']   },
-  'Koln':      { vatDivisor: 1.19, cities: ['Koln']      },
-  'Leipzig':   { vatDivisor: 1.19, cities: ['Leipzig']   },
+  'Belgium':          { vatDivisor: 1.21, cities: ['Brussels', 'Anvers']    },
+  'Berlin':           { vatDivisor: 1.19, cities: ['Berlin']                },
+  'Frankfurt':        { vatDivisor: 1.19, cities: ['Frankfurt']             },
+  'Hamburg':          { vatDivisor: 1.19, cities: ['Hamburg']               },
+  'Koln':             { vatDivisor: 1.19, cities: ['Koln']                  },
+  'Leipzig':          { vatDivisor: 1.19, cities: ['Leipzig']               },
+  'Shooters Brussels':{ vatDivisor: 1.21, cities: ['Shooters Brussels']     },
 };
 
 let tokenClient, accessToken;
@@ -584,7 +586,8 @@ const VENUE_COLORS = {
   'Frankfurt': '#8a6ec4',
   'Hamburg':   '#c47a4a',
   'Koln':      '#4abcbc',
-  'Leipzig':   '#bc84c4',
+  'Leipzig':          '#bc84c4',
+  'Shooters Brussels':'#4abcbc',
 };
 
 let sortCol = 'date', sortAsc = false;
@@ -1603,7 +1606,6 @@ function cityRevenue(city, vatDiv) {
 // Compute venue-level YTD stats for radar axes
 function venueStats(venue) {
   const cfg = VENUE_CONFIG[venue] || VENUE_CONFIG['Belgium'];
-  const { vatDiv } = { vatDiv: cfg.vatDivisor };
   const isSucc = r => r.status === 'paid' || r.status === 'succeeded';
   let inv=0, pos=0, strOnline=0, tips=0;
 
@@ -1834,7 +1836,8 @@ function renderRecon(venue) {
   const hasInv     = venueInv.length > 0;
   const hasPOS     = venuePOS.length > 0;
 
-  let tableBody, grandTotal;
+  // Hoisted so renderStreamDonut can read them after both branches
+  let tableBody, grandTotal, invTotal, posTotal, strTotal, tipTotal;
 
   if (isBelgium) {
     // ── Belgium: dual-city (Brussels + Anvers) ──
@@ -1843,7 +1846,8 @@ function renderRecon(venue) {
     const invFnbBxl = agg(venueInv,'amount', r=>r.city==='Brussels', r=>r.category==='F&B');
     const invFnbAnt = agg(venueInv,'amount', r=>r.city==='Anvers',   r=>r.category==='F&B');
     const invOthBxl = agg(venueInv,'amount', r=>r.city==='Brussels', r=>r.category==='Other');
-    const invTotal  = addRows(invActBxl,invActAnt,invFnbBxl,invFnbAnt,invOthBxl);
+    const invOthAnt = agg(venueInv,'amount', r=>r.city==='Anvers',   r=>r.category==='Other'); // fix: was missing
+    invTotal  = addRows(invActBxl,invActAnt,invFnbBxl,invFnbAnt,invOthBxl,invOthAnt);
 
     const posActBxl = agg(venuePOS,'revenue', r=>r.branch==='Brussels', r=>posCategory(r)==='Activité');
     const posActAnt = agg(venuePOS,'revenue', r=>r.branch==='Anvers',   r=>posCategory(r)==='Activité');
@@ -1851,20 +1855,20 @@ function renderRecon(venue) {
     const posFnbAnt = agg(venuePOS,'revenue', r=>r.branch==='Anvers',   r=>posCategory(r)==='F&B');
     const posMrgBxl = agg(venuePOS,'revenue', r=>r.branch==='Brussels', r=>posCategory(r)==='Merge');
     const posMrgAnt = agg(venuePOS,'revenue', r=>r.branch==='Anvers',   r=>posCategory(r)==='Merge');
-    const posTotal  = addRows(posActBxl,posActAnt,posFnbBxl,posFnbAnt,posMrgBxl,posMrgAnt);
+    posTotal  = addRows(posActBxl,posActAnt,posFnbBxl,posFnbAnt,posMrgBxl,posMrgAnt);
 
     const stripeOnline = venueStripe.filter(r=>r.type==='online').map(r=>({...r,amount:r.amount/vatDivisor}));
     const strBxl   = agg(stripeOnline,'amount', r=>r.city==='Brussels');
     const strAnt   = agg(stripeOnline,'amount', r=>r.city==='Anvers');
-    const strTotal = addRows(strBxl,strAnt);
+    strTotal = addRows(strBxl,strAnt);
 
     const tipBxl   = agg(venueStripe,'tip_amount', r=>r.city==='Brussels');
     const tipAnt   = agg(venueStripe,'tip_amount', r=>r.city==='Anvers');
-    const tipTotal = addRows(tipBxl,tipAnt);
+    tipTotal = addRows(tipBxl,tipAnt);
 
     grandTotal     = addRows(invTotal,posTotal,strTotal,tipTotal);
     const bxlTotal = addRows(invActBxl,invFnbBxl,invOthBxl,posActBxl,posFnbBxl,posMrgBxl,strBxl,tipBxl);
-    const antTotal = addRows(invActAnt,invFnbAnt,posActAnt,posFnbAnt,posMrgAnt,strAnt,tipAnt);
+    const antTotal = addRows(invActAnt,invFnbAnt,invOthAnt,posActAnt,posFnbAnt,posMrgAnt,strAnt,tipAnt);
 
     tableBody = `
       ${hasInv ? `
@@ -1903,17 +1907,17 @@ function renderRecon(venue) {
     const invAct = agg(venueInv,'amount', r=>r.category==='Activité');
     const invFnb = agg(venueInv,'amount', r=>r.category==='F&B');
     const invOth = agg(venueInv,'amount', r=>r.category==='Other');
-    const invTotal = addRows(invAct,invFnb,invOth);
+    invTotal = addRows(invAct,invFnb,invOth);
 
     const posAct = agg(venuePOS,'revenue', r=>posCategory(r)==='Activité');
     const posFnb = agg(venuePOS,'revenue', r=>posCategory(r)==='F&B');
     const posMrg = agg(venuePOS,'revenue', r=>posCategory(r)==='Merge');
-    const posTotal = addRows(posAct,posFnb,posMrg);
+    posTotal = addRows(posAct,posFnb,posMrg);
 
     const stripeOnline = venueStripe.filter(r=>r.type==='online').map(r=>({...r,amount:r.amount/vatDivisor}));
-    const strCity  = agg(stripeOnline,'amount');
-    const tipCity  = agg(venueStripe,'tip_amount');
-    grandTotal = addRows(invTotal,posTotal,strCity,tipCity);
+    strTotal = agg(stripeOnline,'amount');
+    tipTotal = agg(venueStripe,'tip_amount');
+    grandTotal = addRows(invTotal,posTotal,strTotal,tipTotal);
 
     tableBody = `
       ${hasInv ? `
@@ -1928,13 +1932,13 @@ function renderRecon(venue) {
       ${posFnb.YTD>0.01?subRow(`F&B ${city}`,posFnb,[`F&B ${city} — Odoo POS`,`File: ${posFile}`]):''}
       ${posMrg.YTD>0.01?subRow(`Merge ${city}`,posMrg,[`Merge ${city} — Odoo POS`,`File: ${posFile}`]):''}
       ${gap()}` : ''}
-      ${strCity.YTD>0.01?`
-      ${secRow('Stripe (Card)',strCity,[stripeFile,`Online only · Stripe gives the gross amount charged (VAT included) — divided by ${vatDivisor} to strip 19% German VAT`,'In-store Stripe already counted in Odoo POS — excluded here to avoid double-counting'])}
-      ${subRow(city,strCity,[`${city} — Stripe Online · Amount ÷ ${vatDivisor} · File: ${stripeFile}`])}
+      ${strTotal.YTD>0.01?`
+      ${secRow('Stripe (Card)',strTotal,[stripeFile,`Online only · Stripe gives the gross amount charged (VAT included) — divided by ${vatDivisor} to strip 19% German VAT`,'In-store Stripe already counted in Odoo POS — excluded here to avoid double-counting'])}
+      ${subRow(city,strTotal,[`${city} — Stripe Online · Amount ÷ ${vatDivisor} · File: ${stripeFile}`])}
       ${gap()}`:''}
-      ${tipCity.YTD>0.01?`
-      ${secRow('Tips',tipCity,[stripeFile,'Column: tip_amount · Tips are VAT-exempt so no divisor is applied · All transaction types'])}
-      ${subRow(city,tipCity,[`Tips ${city} · File: ${stripeFile}`])}
+      ${tipTotal.YTD>0.01?`
+      ${secRow('Tips',tipTotal,[stripeFile,'Column: tip_amount · Tips are VAT-exempt so no divisor is applied · All transaction types'])}
+      ${subRow(city,tipTotal,[`Tips ${city} · File: ${stripeFile}`])}
       ${gap()}`:''}
       <tr class="recon-tot"><td class="rc-lbl" data-tip-title="TOTAL — ${venue}" data-tip-body="Invoices (ex-VAT) + POS (ex-VAT) + Stripe online (÷${vatDivisor}) + Tips">TOTAL — ${venue}</td>${cols.map(c=>`<td class="rc-amt">${fmt(grandTotal[c])}</td>`).join('')}</tr>`;
   }
