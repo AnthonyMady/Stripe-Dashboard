@@ -360,26 +360,22 @@ tr:hover td { background: rgba(255,255,255,0.012); }
   <div class="filters" id="filters-bar">
     <span class="filter-label">Filter</span>
     <select id="f-city" onchange="applyFilters()"><option value="">All cities</option></select>
-    <select id="f-week" onchange="applyFilters()"><option value="">All weeks</option></select>
-    <select id="f-month" onchange="applyFilters()"><option value="">All months</option></select>
+    <select id="f-week" onchange="onWeekMonthFilter()"><option value="">All weeks</option></select>
+    <select id="f-month" onchange="onWeekMonthFilter()"><option value="">All months</option></select>
     <div class="filter-sep"></div>
-    <select id="f-status" onchange="applyFilters()">
-      <option value="">All statuses</option>
-      <option value="paid">Paid</option>
-      <option value="failed">Failed</option>
-      <option value="refunded">Refunded</option>
-      <option value="succeeded">Succeeded</option>
-    </select>
     <select id="f-type" onchange="applyFilters()">
       <option value="">All types</option>
       <option value="in-store">In-store</option>
       <option value="online">Online</option>
     </select>
-    <select id="f-tip" onchange="applyFilters()">
-      <option value="">All transactions</option>
-      <option value="yes">With tip</option>
-      <option value="no">No tip</option>
-    </select>
+    <div class="filter-sep"></div>
+    <input type="date" id="f-date-from" onchange="onDateRangeFilter()"
+      style="background:var(--s3);border:1px solid var(--b2);border-radius:6px;color:var(--muted3);font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 10px;cursor:pointer;outline:none;">
+    <span style="color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace;">→</span>
+    <input type="date" id="f-date-to" onchange="onDateRangeFilter()"
+      style="background:var(--s3);border:1px solid var(--b2);border-radius:6px;color:var(--muted3);font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 10px;cursor:pointer;outline:none;">
+    <button onclick="clearDateRange()"
+      style="background:transparent;border:1px solid var(--b2);border-radius:6px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 10px;cursor:pointer;display:none;" id="f-date-clear">✕ clear</button>
   </div>
 
   <!-- REVENUE SPLIT VIEW -->
@@ -942,22 +938,58 @@ function populateFilters() {
   });
 }
 
-function applyFilters() {
-  const city = document.getElementById('f-city').value;
-  const week = document.getElementById('f-week').value;
-  const month = document.getElementById('f-month').value;
-  const status = document.getElementById('f-status').value;
-  const type = document.getElementById('f-type').value;
-  const tip = document.getElementById('f-tip').value;
+// Called when week or month dropdown changes — clears the custom date range
+function onWeekMonthFilter() {
+  document.getElementById('f-date-from').value = '';
+  document.getElementById('f-date-to').value   = '';
+  document.getElementById('f-date-clear').style.display = 'none';
+  applyFilters();
+}
 
-  filtered = RAW.filter(r =>
-    (!city || r.city === city) &&
-    (!week || r.week === parseInt(week)) &&
-    (!month || r.month === month) &&
-    (!status || r.status === status) &&
-    (!type || r.type === type) &&
-    (!tip || (tip === 'yes' ? r.tip_amount > 0 : r.tip_amount === 0))
-  );
+// Called when a custom date input changes — clears week/month dropdowns
+function onDateRangeFilter() {
+  const from = document.getElementById('f-date-from').value;
+  const to   = document.getElementById('f-date-to').value;
+  if (from || to) {
+    document.getElementById('f-week').value  = '';
+    document.getElementById('f-month').value = '';
+    document.getElementById('f-date-clear').style.display = '';
+  }
+  applyFilters();
+}
+
+function clearDateRange() {
+  document.getElementById('f-date-from').value = '';
+  document.getElementById('f-date-to').value   = '';
+  document.getElementById('f-date-clear').style.display = 'none';
+  applyFilters();
+}
+
+function applyFilters() {
+  const city    = document.getElementById('f-city').value;
+  const week    = document.getElementById('f-week').value;
+  const month   = document.getElementById('f-month').value;
+  const type    = document.getElementById('f-type').value;
+  const fromVal = document.getElementById('f-date-from').value; // 'YYYY-MM-DD' or ''
+  const toVal   = document.getElementById('f-date-to').value;
+
+  const fromDate = fromVal ? new Date(fromVal + 'T00:00:00') : null;
+  const toDate   = toVal   ? new Date(toVal   + 'T23:59:59') : null;
+
+  filtered = RAW.filter(r => {
+    if (city  && r.city !== city) return false;
+    if (type  && r.type !== type) return false;
+    // Custom date range takes priority over week/month dropdowns
+    if (fromDate || toDate) {
+      if (!r.dateObj || isNaN(r.dateObj)) return false;
+      if (fromDate && r.dateObj < fromDate) return false;
+      if (toDate   && r.dateObj > toDate)   return false;
+    } else {
+      if (week  && r.week  !== parseInt(week))  return false;
+      if (month && r.month !== month)           return false;
+    }
+    return true;
+  });
   renderAll();
   renderFnbRevenue();
   renderTopProducts();
