@@ -1013,6 +1013,9 @@ function renderAll() {
   const avgTx = totalTx > 0 ? totalRevenue / totalTx : 0;
   const avgTip = tipTx > 0 ? totalTips / tipTx : 0;
 
+  // Date range active? Suppress week/month deltas (they'd compare wrong periods)
+  const dateRangeActive = !!(document.getElementById('f-date-from').value || document.getElementById('f-date-to').value);
+
   // WoW / MoM deltas — follow the selected filter, fall back to today's period
   const selWeekVal  = document.getElementById('f-week').value;
   const selMonthVal = document.getElementById('f-month').value;
@@ -1051,20 +1054,28 @@ function renderAll() {
     return `<div class="kpi-delta ${cls}">${sign}${pct.toFixed(1)}% vs ${label}</div>`;
   }
 
+  // Active filter label
+  const fromVal2 = document.getElementById('f-date-from').value;
+  const toVal2   = document.getElementById('f-date-to').value;
+  const filterBadge = dateRangeActive
+    ? `<div class="kpi-sub" style="color:var(--gold);margin-top:4px;">📅 ${fromVal2}${toVal2 && toVal2 !== fromVal2 ? ' → ' + toVal2 : ''}</div>`
+    : '';
+
   // KPIs
   document.getElementById('kpi-row').innerHTML = `
     <div class="kpi">
       <div class="kpi-label">Total Revenue</div>
       <div class="kpi-val accent-gold">${fmtCur(totalRevenue)}</div>
       <div class="kpi-sub">${totalTx.toLocaleString()} transactions</div>
-      ${fmtDelta(currWRev, prevWRev, 'prev week')}
-      ${!selWeekVal ? fmtDelta(currMRev, prevMRev, 'prev month') : ''}
+      ${filterBadge}
+      ${!dateRangeActive ? fmtDelta(currWRev, prevWRev, 'prev week') : ''}
+      ${!dateRangeActive && !selWeekVal ? fmtDelta(currMRev, prevMRev, 'prev month') : ''}
     </div>
     <div class="kpi">
       <div class="kpi-label">Total Tips</div>
       <div class="kpi-val accent-gold">${fmtCur(totalTips)}</div>
       <div class="kpi-sub">${tipTx.toLocaleString()} tipped transactions</div>
-      ${fmtDelta(currWTips, prevWTips, 'prev week')}
+      ${!dateRangeActive ? fmtDelta(currWTips, prevWTips, 'prev week') : ''}
     </div>
     <div class="kpi">
       <div class="kpi-label">Tip Rate</div>
