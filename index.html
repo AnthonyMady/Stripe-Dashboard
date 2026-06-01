@@ -1900,6 +1900,10 @@ function renderRecon(venue) {
   const cityRow  = (label, data, tip) => `<tr class="recon-city"><td class="rc-lbl"${tipAttr(tip)}>${label}</td>${colCells(data)}</tr>`;
   const pctRow   = (label, a, b, tot) => `<tr class="recon-pct"><td class="rc-lbl">${label}</td>${cols.map(c=>`<td class="rc-amt">${fmtPct(a[c],tot[c])} / ${fmtPct(b[c],tot[c])}</td>`).join('')}</tr>`;
   const gap      = () => `<tr class="recon-gap"><td colspan="${cols.length+1}"></td></tr>`;
+  // Revenue mix rows — shown after TOTAL, indented, muted style
+  const mixRow   = (label, data) => `<tr class="recon-row"><td class="rc-lbl" style="padding-left:28px!important;color:var(--muted2);font-size:10px;">${label}</td>${cols.map((c,i)=>`<td class="rc-amt${i===cols.length-1?' ytd':''}" style="font-size:10px;color:var(--muted2);">${fmt(data[c])}</td>`).join('')}</tr>`;
+  const mixPctRow= (label, data, tot) => `<tr class="recon-pct"><td class="rc-lbl" style="padding-left:28px!important;font-size:10px;">${label}</td>${cols.map((c,i)=>`<td class="rc-amt${i===cols.length-1?' ytd':''}" style="font-size:10px;">${fmtPct(data[c],tot[c])}</td>`).join('')}</tr>`;
+  const mixSep   = (label) => `<tr><td colspan="${cols.length+1}" style="padding:8px 18px 2px;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'JetBrains Mono',monospace;background:var(--s2);">${label}</td></tr>`;
 
   const stripeFile = `stripe_2026_${venue}_YTD.csv`;
   const posFile    = `odoo_pos_${venue.toLowerCase()}_2026_YTD.csv`;
@@ -1908,7 +1912,7 @@ function renderRecon(venue) {
   const hasPOS     = venuePOS.length > 0;
 
   // Hoisted so renderStreamDonut can read them after both branches
-  let tableBody, grandTotal, invTotal, posTotal, strTotal, tipTotal, breakdownHTML = '';
+  let tableBody, grandTotal, invTotal, posTotal, strTotal, tipTotal;
 
   if (isBelgium) {
     // ── Belgium: dual-city (Brussels + Anvers) ──
@@ -1968,22 +1972,29 @@ function renderRecon(venue) {
       ${subRow('Anvers',tipAnt,[`Tips Anvers · File: ${stripeFile}`])}
       ${gap()}
       <tr class="recon-tot"><td class="rc-lbl" data-tip-title="TOTAL — Belgium" data-tip-body="Invoices (ex-VAT) + POS (ex-VAT) + Stripe online (÷${vatDivisor}) + Tips|No double-counting: in-store Stripe counted in Odoo POS">TOTAL — Belgium</td>${cols.map(c=>`<td class="rc-amt">${fmt(grandTotal[c])}</td>`).join('')}</tr>
+      ${mixSep('Revenue mix — Belgium')}
+      ${mixRow('Activity',  addRows(invActBxl,invActAnt,invOthBxl,invOthAnt,posActBxl,posActAnt,posMrgBxl,posMrgAnt,strBxl,strAnt))}
+      ${mixRow('F&amp;B',   addRows(invFnbBxl,invFnbAnt,posFnbBxl,posFnbAnt))}
+      ${mixRow('Tips',      addRows(tipBxl,tipAnt))}
+      ${mixPctRow('% Activity', addRows(invActBxl,invActAnt,invOthBxl,invOthAnt,posActBxl,posActAnt,posMrgBxl,posMrgAnt,strBxl,strAnt), grandTotal)}
+      ${mixPctRow('% F&amp;B',  addRows(invFnbBxl,invFnbAnt,posFnbBxl,posFnbAnt), grandTotal)}
+      ${mixPctRow('% Tips',     addRows(tipBxl,tipAnt), grandTotal)}
+      ${gap()}
       ${cityRow('Brussels',bxlTotal,['Brussels Total','All Brussels revenue streams combined'])}
+      ${mixRow('Activity',  addRows(invActBxl,invOthBxl,posActBxl,posMrgBxl,strBxl))}
+      ${mixRow('F&amp;B',   addRows(invFnbBxl,posFnbBxl))}
+      ${mixRow('Tips',      tipBxl)}
+      ${mixPctRow('% Activity', addRows(invActBxl,invOthBxl,posActBxl,posMrgBxl,strBxl), bxlTotal)}
+      ${mixPctRow('% F&amp;B',  addRows(invFnbBxl,posFnbBxl), bxlTotal)}
+      ${mixPctRow('% Tips',     tipBxl, bxlTotal)}
       ${cityRow('Anvers',antTotal,['Anvers Total','All Anvers revenue streams combined'])}
+      ${mixRow('Activity',  addRows(invActAnt,invOthAnt,posActAnt,posMrgAnt,strAnt))}
+      ${mixRow('F&amp;B',   addRows(invFnbAnt,posFnbAnt))}
+      ${mixRow('Tips',      tipAnt)}
+      ${mixPctRow('% Activity', addRows(invActAnt,invOthAnt,posActAnt,posMrgAnt,strAnt), antTotal)}
+      ${mixPctRow('% F&amp;B',  addRows(invFnbAnt,posFnbAnt), antTotal)}
+      ${mixPctRow('% Tips',     tipAnt, antTotal)}
       ${pctRow('Brussels / Anvers split',bxlTotal,antTotal,grandTotal)}`;
-
-    const bxlAct = addRows(invActBxl, posActBxl, posMrgBxl, strBxl, invOthBxl);
-    const bxlFnb = addRows(invFnbBxl, posFnbBxl);
-    const antAct = addRows(invActAnt, posActAnt, posMrgAnt, strAnt, invOthAnt);
-    const antFnb = addRows(invFnbAnt, posFnbAnt);
-    const totAct = addRows(bxlAct, antAct);
-    const totFnb = addRows(bxlFnb, antFnb);
-    breakdownHTML = `
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;">
-        ${breakdownCard('Brussels',   bxlAct, bxlFnb, tipBxl,   addRows(bxlAct,bxlFnb,tipBxl), '#c8a96e')}
-        ${breakdownCard('Anvers',     antAct, antFnb, tipAnt,   addRows(antAct,antFnb,tipAnt), '#4a7fc4')}
-        ${breakdownCard('Total Belgium', totAct, totFnb, tipTotal, grandTotal, '#888')}
-      </div>`;
 
   } else {
     // ── German venues: single city ──
@@ -2024,56 +2035,14 @@ function renderRecon(venue) {
       ${secRow('Tips',tipTotal,[stripeFile,'Column: tip_amount · Tips are VAT-exempt so no divisor is applied · All transaction types'])}
       ${subRow(city,tipTotal,[`Tips ${city} · File: ${stripeFile}`])}
       ${gap()}`:''}
-      <tr class="recon-tot"><td class="rc-lbl" data-tip-title="TOTAL — ${venue}" data-tip-body="Invoices (ex-VAT) + POS (ex-VAT) + Stripe online (÷${vatDivisor}) + Tips">TOTAL — ${venue}</td>${cols.map(c=>`<td class="rc-amt">${fmt(grandTotal[c])}</td>`).join('')}</tr>`;
-
-    const actTotal = addRows(invAct, posAct, posMrg, strTotal, invOth);
-    const fnbTotal = addRows(invFnb, posFnb);
-    breakdownHTML = `
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;">
-        ${breakdownCard(venue, actTotal, fnbTotal, tipTotal, grandTotal, '#c8a96e')}
-      </div>`;
-  }
-
-  // ── City breakdown cards ──────────────────────────────────────────────────
-  function breakdownCard(label, act, fnb, tips, total, color) {
-    const ytd = v => v.YTD || 0;
-    const actV  = ytd(act);
-    const fnbV  = ytd(fnb);
-    const tipV  = ytd(tips);
-    const totV  = ytd(total) || (actV + fnbV + tipV);
-    const pct   = v => totV > 0 ? (v / totV * 100).toFixed(1) + '%' : '—';
-    const bar   = (v, col) => `<div style="height:4px;border-radius:2px;background:${col};width:${totV>0?Math.min(v/totV*100,100).toFixed(1):0}%;margin-top:3px;"></div>`;
-    return `
-      <div style="background:var(--s2);border:1px solid var(--b2);border-radius:10px;padding:18px 20px;flex:1;min-width:160px;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:${color};margin-bottom:10px;">${label}</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--text);margin-bottom:14px;">${fmtCurShort(totV)}</div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;">
-              <span style="font-size:10px;color:var(--muted3);font-family:'JetBrains Mono',monospace;">Activity</span>
-              <span style="font-size:11px;font-weight:600;color:var(--text);font-family:'JetBrains Mono',monospace;">${fmtCurShort(actV)}</span>
-            </div>
-            ${bar(actV,'#4a7fc4')}
-            <div style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-align:right;margin-top:1px;">${pct(actV)}</div>
-          </div>
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;">
-              <span style="font-size:10px;color:var(--muted3);font-family:'JetBrains Mono',monospace;">F&amp;B</span>
-              <span style="font-size:11px;font-weight:600;color:var(--text);font-family:'JetBrains Mono',monospace;">${fmtCurShort(fnbV)}</span>
-            </div>
-            ${bar(fnbV,'#4a9e6e')}
-            <div style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-align:right;margin-top:1px;">${pct(fnbV)}</div>
-          </div>
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;">
-              <span style="font-size:10px;color:var(--muted3);font-family:'JetBrains Mono',monospace;">Tips</span>
-              <span style="font-size:11px;font-weight:600;color:var(--text);font-family:'JetBrains Mono',monospace;">${fmtCurShort(tipV)}</span>
-            </div>
-            ${bar(tipV,'#c8a96e')}
-            <div style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-align:right;margin-top:1px;">${pct(tipV)}</div>
-          </div>
-        </div>
-      </div>`;
+      <tr class="recon-tot"><td class="rc-lbl" data-tip-title="TOTAL — ${venue}" data-tip-body="Invoices (ex-VAT) + POS (ex-VAT) + Stripe online (÷${vatDivisor}) + Tips">TOTAL — ${venue}</td>${cols.map(c=>`<td class="rc-amt">${fmt(grandTotal[c])}</td>`).join('')}</tr>
+      ${mixSep('Revenue mix — ' + venue)}
+      ${mixRow('Activity',  addRows(invAct,invOth,posAct,posMrg,strTotal))}
+      ${mixRow('F&amp;B',   addRows(invFnb,posFnb))}
+      ${mixRow('Tips',      tipTotal)}
+      ${mixPctRow('% Activity', addRows(invAct,invOth,posAct,posMrg,strTotal), grandTotal)}
+      ${mixPctRow('% F&amp;B',  addRows(invFnb,posFnb), grandTotal)}
+      ${mixPctRow('% Tips',     tipTotal, grandTotal)}`;
   }
 
   container.innerHTML = `
@@ -2083,8 +2052,7 @@ function renderRecon(venue) {
         ${colLbls.map((l,i)=>`<th class="recon-th-val${i===colLbls.length-1?' ytd':''}">${l}</th>`).join('')}
       </tr></thead>
       <tbody>${tableBody}</tbody>
-    </table>
-    <div style="padding:0 4px;">${breakdownHTML}</div>`;
+    </table>`;
 
   // Tooltip wiring
   const tipBox   = document.getElementById('recon-tip');
