@@ -1908,7 +1908,7 @@ function renderRecon(venue) {
   const hasPOS     = venuePOS.length > 0;
 
   // Hoisted so renderStreamDonut can read them after both branches
-  let tableBody, grandTotal, invTotal, posTotal, strTotal, tipTotal;
+  let tableBody, grandTotal, invTotal, posTotal, strTotal, tipTotal, breakdownHTML = '';
 
   if (isBelgium) {
     // ── Belgium: dual-city (Brussels + Anvers) ──
@@ -1972,6 +1972,19 @@ function renderRecon(venue) {
       ${cityRow('Anvers',antTotal,['Anvers Total','All Anvers revenue streams combined'])}
       ${pctRow('Brussels / Anvers split',bxlTotal,antTotal,grandTotal)}`;
 
+    const bxlAct = addRows(invActBxl, posActBxl, posMrgBxl, strBxl, invOthBxl);
+    const bxlFnb = addRows(invFnbBxl, posFnbBxl);
+    const antAct = addRows(invActAnt, posActAnt, posMrgAnt, strAnt, invOthAnt);
+    const antFnb = addRows(invFnbAnt, posFnbAnt);
+    const totAct = addRows(bxlAct, antAct);
+    const totFnb = addRows(bxlFnb, antFnb);
+    breakdownHTML = `
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;">
+        ${breakdownCard('Brussels',   bxlAct, bxlFnb, tipBxl,   addRows(bxlAct,bxlFnb,tipBxl), '#c8a96e')}
+        ${breakdownCard('Anvers',     antAct, antFnb, tipAnt,   addRows(antAct,antFnb,tipAnt), '#4a7fc4')}
+        ${breakdownCard('Total Belgium', totAct, totFnb, tipTotal, grandTotal, '#888')}
+      </div>`;
+
   } else {
     // ── German venues: single city ──
     const city = venue;
@@ -2012,6 +2025,55 @@ function renderRecon(venue) {
       ${subRow(city,tipTotal,[`Tips ${city} · File: ${stripeFile}`])}
       ${gap()}`:''}
       <tr class="recon-tot"><td class="rc-lbl" data-tip-title="TOTAL — ${venue}" data-tip-body="Invoices (ex-VAT) + POS (ex-VAT) + Stripe online (÷${vatDivisor}) + Tips">TOTAL — ${venue}</td>${cols.map(c=>`<td class="rc-amt">${fmt(grandTotal[c])}</td>`).join('')}</tr>`;
+
+    const actTotal = addRows(invAct, posAct, posMrg, strTotal, invOth);
+    const fnbTotal = addRows(invFnb, posFnb);
+    breakdownHTML = `
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;">
+        ${breakdownCard(venue, actTotal, fnbTotal, tipTotal, grandTotal, '#c8a96e')}
+      </div>`;
+  }
+
+  // ── City breakdown cards ──────────────────────────────────────────────────
+  function breakdownCard(label, act, fnb, tips, total, color) {
+    const ytd = v => v.YTD || 0;
+    const actV  = ytd(act);
+    const fnbV  = ytd(fnb);
+    const tipV  = ytd(tips);
+    const totV  = ytd(total) || (actV + fnbV + tipV);
+    const pct   = v => totV > 0 ? (v / totV * 100).toFixed(1) + '%' : '—';
+    const bar   = (v, col) => `<div style="height:4px;border-radius:2px;background:${col};width:${totV>0?Math.min(v/totV*100,100).toFixed(1):0}%;margin-top:3px;"></div>`;
+    return `
+      <div style="background:var(--s2);border:1px solid var(--b2);border-radius:10px;padding:18px 20px;flex:1;min-width:160px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:${color};margin-bottom:10px;">${label}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--text);margin-bottom:14px;">${fmtCurShort(totV)}</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;">
+              <span style="font-size:10px;color:var(--muted3);font-family:'JetBrains Mono',monospace;">Activity</span>
+              <span style="font-size:11px;font-weight:600;color:var(--text);font-family:'JetBrains Mono',monospace;">${fmtCurShort(actV)}</span>
+            </div>
+            ${bar(actV,'#4a7fc4')}
+            <div style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-align:right;margin-top:1px;">${pct(actV)}</div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;">
+              <span style="font-size:10px;color:var(--muted3);font-family:'JetBrains Mono',monospace;">F&amp;B</span>
+              <span style="font-size:11px;font-weight:600;color:var(--text);font-family:'JetBrains Mono',monospace;">${fmtCurShort(fnbV)}</span>
+            </div>
+            ${bar(fnbV,'#4a9e6e')}
+            <div style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-align:right;margin-top:1px;">${pct(fnbV)}</div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;">
+              <span style="font-size:10px;color:var(--muted3);font-family:'JetBrains Mono',monospace;">Tips</span>
+              <span style="font-size:11px;font-weight:600;color:var(--text);font-family:'JetBrains Mono',monospace;">${fmtCurShort(tipV)}</span>
+            </div>
+            ${bar(tipV,'#c8a96e')}
+            <div style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-align:right;margin-top:1px;">${pct(tipV)}</div>
+          </div>
+        </div>
+      </div>`;
   }
 
   container.innerHTML = `
@@ -2021,7 +2083,8 @@ function renderRecon(venue) {
         ${colLbls.map((l,i)=>`<th class="recon-th-val${i===colLbls.length-1?' ytd':''}">${l}</th>`).join('')}
       </tr></thead>
       <tbody>${tableBody}</tbody>
-    </table>`;
+    </table>
+    <div style="padding:0 4px;">${breakdownHTML}</div>`;
 
   // Tooltip wiring
   const tipBox   = document.getElementById('recon-tip');
