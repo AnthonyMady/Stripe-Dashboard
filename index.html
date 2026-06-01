@@ -1822,6 +1822,25 @@ function renderCityFnb() {
   });
 }
 
+function reconToggle(el, type) {
+  const collapsed = el.dataset.collapsed === '1';
+  const arrow = el.querySelector('.recon-arrow');
+  let row = el.nextElementSibling;
+  while (row) {
+    const cls = row.classList;
+    // Determine if this row is a child of the clicked header
+    const isChild =
+      (type === 'sec'  && cls.contains('recon-sec-child')) ||
+      (type === 'mix'  && cls.contains('recon-mix-child')) ||
+      (type === 'city' && (cls.contains('recon-mix-child') || (cls.contains('recon-row') && !cls.contains('recon-sec-child'))) && !cls.contains('recon-split-row'));
+    if (!isChild) break;
+    row.style.display = collapsed ? '' : 'none';
+    row = row.nextElementSibling;
+  }
+  el.dataset.collapsed = collapsed ? '0' : '1';
+  if (arrow) arrow.style.transform = collapsed ? '' : 'rotate(-90deg)';
+}
+
 function renderRecon(venue) {
   venue = venue || currentReconVenue || 'Belgium';
   currentReconVenue = venue;
@@ -1895,15 +1914,16 @@ function renderRecon(venue) {
   const colCells = (data, cls='') => cols.map((c,i) =>
     `<td class="rc-amt${i===cols.length-1?' ytd':''}${cls?' '+cls:''}">${fmt(data[c])}</td>`).join('');
   const tipAttr  = tip => tip ? ` data-tip-title="${tip[0].replace(/"/g,"'")}" data-tip-body="${tip.slice(1).join('|').replace(/"/g,"'")}"` : '';
-  const secRow   = (label, data, tip) => `<tr class="recon-sec"><td class="rc-lbl"${tipAttr(tip)}>${label}</td>${colCells(data)}</tr>`;
-  const subRow   = (label, data, tip) => `<tr class="recon-row"><td class="rc-lbl"${tipAttr(tip)}>${label}</td>${colCells(data)}</tr>`;
-  const cityRow  = (label, data, tip) => `<tr class="recon-city"><td class="rc-lbl"${tipAttr(tip)}>${label}</td>${colCells(data)}</tr>`;
-  const pctRow   = (label, a, b, tot) => `<tr class="recon-pct"><td class="rc-lbl">${label}</td>${cols.map(c=>`<td class="rc-amt">${fmtPct(a[c],tot[c])} / ${fmtPct(b[c],tot[c])}</td>`).join('')}</tr>`;
+  const arw = () => `<span class="recon-arrow" style="display:inline-block;font-size:8px;margin-right:6px;transition:transform 0.2s;color:var(--muted);user-select:none;">▼</span>`;
+  const secRow   = (label, data, tip) => `<tr class="recon-sec recon-collapsible" onclick="reconToggle(this,'sec')" style="cursor:pointer;"><td class="rc-lbl"${tipAttr(tip)}>${arw()}${label}</td>${colCells(data)}</tr>`;
+  const subRow   = (label, data, tip) => `<tr class="recon-row recon-sec-child"><td class="rc-lbl"${tipAttr(tip)}>${label}</td>${colCells(data)}</tr>`;
+  const cityRow  = (label, data, tip) => `<tr class="recon-city recon-collapsible" onclick="reconToggle(this,'city')" style="cursor:pointer;"><td class="rc-lbl"${tipAttr(tip)}>${arw()}${label}</td>${colCells(data)}</tr>`;
+  const pctRow   = (label, a, b, tot) => `<tr class="recon-pct recon-split-row"><td class="rc-lbl">${label}</td>${cols.map(c=>`<td class="rc-amt">${fmtPct(a[c],tot[c])} / ${fmtPct(b[c],tot[c])}</td>`).join('')}</tr>`;
   const gap      = () => `<tr class="recon-gap"><td colspan="${cols.length+1}"></td></tr>`;
   // Revenue mix rows — shown after TOTAL, indented, muted style
-  const mixRow   = (label, data) => `<tr class="recon-row"><td class="rc-lbl" style="padding-left:28px!important;color:var(--muted2);font-size:10px;">${label}</td>${cols.map((c,i)=>`<td class="rc-amt${i===cols.length-1?' ytd':''}" style="font-size:10px;color:var(--muted2);">${fmt(data[c])}</td>`).join('')}</tr>`;
-  const mixPctRow= (label, data, tot) => `<tr class="recon-pct"><td class="rc-lbl" style="padding-left:28px!important;font-size:10px;">${label}</td>${cols.map((c,i)=>`<td class="rc-amt${i===cols.length-1?' ytd':''}" style="font-size:10px;">${fmtPct(data[c],tot[c])}</td>`).join('')}</tr>`;
-  const mixSep   = (label) => `<tr><td colspan="${cols.length+1}" style="padding:8px 18px 2px;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'JetBrains Mono',monospace;background:var(--s2);">${label}</td></tr>`;
+  const mixRow   = (label, data) => `<tr class="recon-row recon-mix-child"><td class="rc-lbl" style="padding-left:28px!important;color:var(--muted2);font-size:10px;">${label}</td>${cols.map((c,i)=>`<td class="rc-amt${i===cols.length-1?' ytd':''}" style="font-size:10px;color:var(--muted2);">${fmt(data[c])}</td>`).join('')}</tr>`;
+  const mixPctRow= (label, data, tot) => `<tr class="recon-pct recon-mix-child"><td class="rc-lbl" style="padding-left:28px!important;font-size:10px;">${label}</td>${cols.map((c,i)=>`<td class="rc-amt${i===cols.length-1?' ytd':''}" style="font-size:10px;">${fmtPct(data[c],tot[c])}</td>`).join('')}</tr>`;
+  const mixSep   = (label) => `<tr class="recon-mix-sep recon-collapsible" onclick="reconToggle(this,'mix')" style="cursor:pointer;"><td colspan="${cols.length+1}" style="padding:8px 18px 2px;font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-family:'JetBrains Mono',monospace;background:var(--s2);">${arw()}${label}</td></tr>`;
 
   const stripeFile = `stripe_2026_${venue}_YTD.csv`;
   const posFile    = `odoo_pos_${venue.toLowerCase()}_2026_YTD.csv`;
