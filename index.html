@@ -535,6 +535,34 @@ tr:hover td { background: rgba(255,255,255,0.012); }
         <span id="tips-foot-right"></span>
       </div>
     </div>
+
+    <!-- STRIPE FEE ANALYSIS -->
+    <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);overflow:hidden;margin-top:8px" id="fee-section">
+      <div class="table-hdr">
+        <div class="table-hdr-title">Stripe Fee Analysis — by Payment Channel</div>
+        <div class="table-hdr-count" id="fee-count"></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Channel</th>
+            <th style="text-align:right">Transactions</th>
+            <th style="text-align:right">% of Tx</th>
+            <th style="text-align:right">Volume</th>
+            <th style="text-align:right">% of Volume</th>
+            <th style="text-align:right">Total Fees</th>
+            <th style="text-align:right">Avg Fee / Tx</th>
+            <th style="text-align:right">Effective Rate</th>
+          </tr></thead>
+          <tbody id="fee-tbody"></tbody>
+        </table>
+      </div>
+      <div class="table-foot">
+        <span id="fee-foot-left"></span>
+        <span id="fee-foot-right"></span>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -873,9 +901,14 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
     const tip = parseFloat((obj['tip_amount'] || '0').replace(',', '.')) || 0;
     const total = amount + tip;
 
+    // Stripe fee columns (added June 2026)
+    const stripeFee  = parseFloat((obj['stripe_fee']  || '0').replace(',', '.')) || 0;
+    const netAmount  = parseFloat((obj['net_amount']   || '0').replace(',', '.')) || 0;
+    const feeDetails = (obj['stripe_fee_details'] || '').trim();
+
     rows.push({
       id: obj['id'] || '',
-      date: dateStr,            // effective date (consumed if available, else booking)
+      date: dateStr,
       booking_date: bookingDateStr,
       consumed_date: consumedDateStr,
       date_source: useConsumed ? 'consumed' : 'booking',
@@ -892,12 +925,16 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
       currency: (obj['Currency'] || obj['currency'] || 'EUR').toUpperCase(),
       status: status,
       type: payType,
+      pmd_type: pmdType,
       card_id: cardId,
       payment_intent_id: piId,
       description: obj['Description'] || '',
       customer_email: obj['Customer Email'] || '',
       statement: obj['Statement Descriptor'] || '',
       reader_label: obj['Reader Label'] || '',
+      stripe_fee: stripeFee,
+      net_amount: netAmount,
+      fee_details: feeDetails,
     });
   }
   return rows;
@@ -994,6 +1031,7 @@ function applyFilters() {
   renderFnbRevenue();
   renderTopProducts();
   renderTips();
+  renderFeeAnalysis();
 }
 
 // ── SORT ──────────────────────────────────────────────
@@ -1120,6 +1158,7 @@ function renderAll() {
   }).join('');
 
   renderCharts(succeeded);
+  renderFeeAnalysis();
 }
 
 function toggleCity(city) {
@@ -1420,6 +1459,75 @@ function exportTipsCSV() {
   const month = document.getElementById('f-month').value || 'YTD';
   a.download = `tips_${city}_${month}.csv`;
   a.click();
+}
+
+// ── STRIPE FEE ANALYSIS ──────────────────────────────
+function renderFeeAnalysis() {
+  const succeeded = filtered.filter(r => r.status === 'paid' || r.status === 'succeeded');
+
+  // Only show section if fee data is present (new CSVs)
+  const hasFees = succeeded.some(r => r.stripe_fee > 0);
+  document.getElementById('fee-section').style.display = hasFees ? '' : 'none';
+  if (!hasFees) return;
+
+  // Group by payment method type, normalise label
+  const CHANNEL_LABELS = {
+    'card_present':    'Card — In-store Terminal',
+    'interac_present': 'Interac — In-store Terminal',
+    'card':            'Card — Online',
+    'bancontact':      'Bancontact — Online',
+    'ideal':           'iDEAL — Online',
+    'sepa_debit':      'SEPA Debit',
+    'paypal':          'PayPal',
+    'link':            'Link (Stripe)',
+    '':                'Unknown / Other',
+  };
+
+  const channels = {};
+  succeeded.forEach(r => {
+    const key = r.pmd_type || '';
+    if (!channels[key]) channels[key] = { txCount: 0, volume: 0, fees: 0 };
+    channels[key].txCount++;
+    channels[key].volume += r.amount;
+    channels[key].fees   += r.stripe_fee;
+  });
+
+  const totalTx  = succeeded.length;
+  const totalVol = succeeded.reduce((s, r) => s + r.amount, 0);
+  const totalFee = succeeded.reduce((s, r) => s + r.stripe_fee, 0);
+
+  // Sort by volume descending
+  const sorted = Object.entries(channels).sort((a, b) => b[1].volume - a[1].volume);
+
+  const pct = (v, t) => t > 0 ? (v / t * 100).toFixed(1) + '%' : '—';
+  const rate = (fee, vol) => vol > 0 ? (fee / vol * 100).toFixed(2) + '%' : '—';
+
+  document.getElementById('fee-tbody').innerHTML = [
+    ...sorted.map(([key, d]) => `<tr>
+      <td style="font-weight:600">${CHANNEL_LABELS[key] || key || 'Unknown'}</td>
+      <td class="mono" style="text-align:right">${d.txCount.toLocaleString()}</td>
+      <td class="mono" style="text-align:right;color:var(--muted2)">${pct(d.txCount, totalTx)}</td>
+      <td class="mono" style="text-align:right;color:var(--gold)">${fmtCur(d.volume)}</td>
+      <td class="mono" style="text-align:right;color:var(--muted2)">${pct(d.volume, totalVol)}</td>
+      <td class="mono" style="text-align:right;color:var(--red)">${fmtCur(d.fees)}</td>
+      <td class="mono" style="text-align:right;color:var(--muted2)">${d.txCount > 0 ? fmtCur(d.fees / d.txCount) : '—'}</td>
+      <td class="mono" style="text-align:right;color:var(--muted2)">${rate(d.fees, d.volume)}</td>
+    </tr>`),
+    `<tr style="background:var(--gold-dim);font-weight:700;">
+      <td style="color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;font-size:11px;">TOTAL</td>
+      <td class="mono" style="text-align:right;color:var(--gold)">${totalTx.toLocaleString()}</td>
+      <td class="mono" style="text-align:right;color:var(--gold)">100%</td>
+      <td class="mono" style="text-align:right;color:var(--gold)">${fmtCur(totalVol)}</td>
+      <td class="mono" style="text-align:right;color:var(--gold)">100%</td>
+      <td class="mono" style="text-align:right;color:var(--red)">${fmtCur(totalFee)}</td>
+      <td class="mono" style="text-align:right;color:var(--gold)">${totalTx > 0 ? fmtCur(totalFee / totalTx) : '—'}</td>
+      <td class="mono" style="text-align:right;color:var(--gold)">${rate(totalFee, totalVol)}</td>
+    </tr>`
+  ].join('');
+
+  document.getElementById('fee-count').textContent = `${sorted.length} channels`;
+  document.getElementById('fee-foot-left').textContent = `Based on ${totalTx.toLocaleString()} succeeded transactions with fee data`;
+  document.getElementById('fee-foot-right').textContent = `Total fees: ${fmtCur(totalFee)} · Effective rate: ${rate(totalFee, totalVol)}`;
 }
 
 // ── TAB SWITCH ───────────────────────────────────────
