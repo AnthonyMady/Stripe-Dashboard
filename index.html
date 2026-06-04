@@ -925,6 +925,7 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
       gross_amount: amount,
       tip_amount: tip,
       total_amount: total,
+      product_meta: (obj['product (metadata)'] || '').trim().toLowerCase(),
       currency: (obj['Currency'] || obj['currency'] || 'EUR').toUpperCase(),
       status: status,
       type: payType,
@@ -1045,14 +1046,17 @@ function sortBy(col) {
 
 // ── RENDER ────────────────────────────────────────────
 function renderAll() {
-  const succeeded = filtered.filter(r => r.status === 'paid' || r.status === 'succeeded');
-  const totalRevenue = succeeded.reduce((s, r) => s + r.amount, 0);
-  const totalTips = succeeded.reduce((s, r) => s + r.tip_amount, 0);
-  const totalTx = succeeded.length;
-  const tipTx = succeeded.filter(r => r.tip_amount > 0).length;
-  const tipRate = totalTx > 0 ? (tipTx / totalTx * 100) : 0;
-  const avgTx = totalTx > 0 ? totalRevenue / totalTx : 0;
-  const avgTip = tipTx > 0 ? totalTips / tipTx : 0;
+  const succeeded    = filtered.filter(r => r.status === 'paid' || r.status === 'succeeded');
+  const voucherTx    = succeeded.filter(r => r.product_meta === 'voucher');
+  const nonVoucherTx = succeeded.filter(r => r.product_meta !== 'voucher');
+  const totalRevenue = nonVoucherTx.reduce((s, r) => s + r.amount, 0);
+  const totalVouchers = voucherTx.reduce((s, r) => s + r.amount, 0);
+  const totalTips    = succeeded.reduce((s, r) => s + r.tip_amount, 0);
+  const totalTx      = nonVoucherTx.length;
+  const tipTx        = succeeded.filter(r => r.tip_amount > 0).length;
+  const tipRate      = totalTx > 0 ? (tipTx / totalTx * 100) : 0;
+  const avgTx        = totalTx > 0 ? totalRevenue / totalTx : 0;
+  const avgTip       = tipTx > 0 ? totalTips / tipTx : 0;
 
   // Date range active? Suppress week/month deltas (they'd compare wrong periods)
   const dateRangeActive = !!(document.getElementById('f-date-from').value || document.getElementById('f-date-to').value);
@@ -1117,6 +1121,11 @@ function renderAll() {
       <div class="kpi-val accent-gold">${fmtCur(totalTips)}</div>
       <div class="kpi-sub">${tipTx.toLocaleString()} tipped transactions</div>
       ${!dateRangeActive ? fmtDelta(currWTips, prevWTips, 'prev week') : ''}
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Voucher Sales</div>
+      <div class="kpi-val" style="color:var(--blue)">${fmtCur(totalVouchers)}</div>
+      <div class="kpi-sub">${voucherTx.length.toLocaleString()} vouchers sold · excl. from revenue</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Tip Rate</div>
