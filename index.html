@@ -908,11 +908,6 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
     const netAmount  = parseFloat((obj['net_amount']   || '0').replace(',', '.')) || 0;
     const feeDetails = (obj['stripe_fee_details'] || '').trim();
 
-    // Stripe fee columns (added June 2026)
-    const stripeFee  = parseFloat((obj['stripe_fee']  || '0').replace(',', '.')) || 0;
-    const netAmount  = parseFloat((obj['net_amount']   || '0').replace(',', '.')) || 0;
-    const feeDetails = (obj['stripe_fee_details'] || '').trim();
-
     rows.push({
       id: obj['id'] || '',
       date: dateStr,
