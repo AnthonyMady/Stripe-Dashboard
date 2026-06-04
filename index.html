@@ -899,7 +899,14 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
 
     // Tips — always use value from Stripe CSV, no zeroing
     const tip = parseFloat((obj['tip_amount'] || '0').replace(',', '.')) || 0;
-    const total = amount + tip;
+    // charge.amount already includes tip — subtract to get revenue ex-tip
+    const revenueExTip = amount - tip;
+    const total = amount; // gross charge amount (incl. tip), kept for reference
+
+    // Stripe fee columns (added June 2026)
+    const stripeFee  = parseFloat((obj['stripe_fee']  || '0').replace(',', '.')) || 0;
+    const netAmount  = parseFloat((obj['net_amount']   || '0').replace(',', '.')) || 0;
+    const feeDetails = (obj['stripe_fee_details'] || '').trim();
 
     // Stripe fee columns (added June 2026)
     const stripeFee  = parseFloat((obj['stripe_fee']  || '0').replace(',', '.')) || 0;
@@ -919,7 +926,8 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
       week: txWeek,
       city: city,
       fileCity: fileCity,
-      amount: amount,
+      amount: revenueExTip,
+      gross_amount: amount,
       tip_amount: tip,
       total_amount: total,
       currency: (obj['Currency'] || obj['currency'] || 'EUR').toUpperCase(),
@@ -1488,12 +1496,12 @@ function renderFeeAnalysis() {
     const key = r.pmd_type || '';
     if (!channels[key]) channels[key] = { txCount: 0, volume: 0, fees: 0 };
     channels[key].txCount++;
-    channels[key].volume += r.amount;
+    channels[key].volume += r.gross_amount;
     channels[key].fees   += r.stripe_fee;
   });
 
   const totalTx  = succeeded.length;
-  const totalVol = succeeded.reduce((s, r) => s + r.amount, 0);
+  const totalVol = succeeded.reduce((s, r) => s + r.gross_amount, 0);
   const totalFee = succeeded.reduce((s, r) => s + r.stripe_fee, 0);
 
   // Sort by volume descending
