@@ -8,70 +8,61 @@
 <script src="https://accounts.google.com/gsi/client"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
 
 :root {
-  --bg: #080809;
-  --s1: #0f0f11;
-  --s2: #141417;
-  --s3: #1a1a1f;
-  --b1: rgba(255,255,255,0.05);
-  --b2: rgba(255,255,255,0.09);
-  --b3: rgba(255,255,255,0.15);
-  --text: #f0f0f0;
-  --muted: #555;
-  --muted2: #888;
-  --muted3: #aaa;
-  --gold: #c8a96e;
-  --gold2: #e8c98e;
-  --gold-dim: rgba(200,169,110,0.12);
-  --red: #c4504f;
-  --red-dim: rgba(196,80,79,0.1);
-  --green: #4a9e6e;
-  --green-dim: rgba(74,158,110,0.1);
-  --blue: #4a7fc4;
-  --blue-dim: rgba(74,127,196,0.1);
-  --orange: #c47a4a;
-  --purple: #8a6ec4;
+  --bg: #f0f2f5;
+  --s1: #ffffff;
+  --s2: #f9fafb;
+  --s3: #f3f4f6;
+  --b1: #e5e7eb;
+  --b2: #d1d5db;
+  --b3: #9ca3af;
+  --text: #111827;
+  --muted: #9ca3af;
+  --muted2: #6b7280;
+  --muted3: #374151;
+  --gold: #2563eb;
+  --gold2: #3b82f6;
+  --gold-dim: rgba(37,99,235,0.08);
+  --red: #dc2626;
+  --red-dim: rgba(220,38,38,0.08);
+  --green: #16a34a;
+  --green-dim: rgba(22,163,74,0.08);
+  --blue: #2563eb;
+  --blue-dim: rgba(37,99,235,0.08);
+  --orange: #ea580c;
+  --purple: #7c3aed;
   --r: 8px;
   --r-lg: 12px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Bricolage Grotesque', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; -webkit-font-smoothing: antialiased; }
+body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; -webkit-font-smoothing: antialiased; }
 
 /* ── AUTH ── */
 #auth-screen {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 100vh; gap: 28px; padding: 40px; position: relative; overflow: hidden;
-}
-#auth-screen::before {
-  content: ''; position: absolute; inset: 0;
-  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(200,169,110,0.07) 0%, transparent 65%);
-  pointer-events: none;
-}
-#auth-screen::after {
-  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--b2), transparent);
+  min-height: 100vh; gap: 28px; padding: 40px;
 }
 .auth-eyebrow { font-size: 10px; letter-spacing: 0.25em; color: var(--muted2); text-transform: uppercase; font-weight: 500; font-family: 'JetBrains Mono', monospace; }
 .auth-logo { display: flex; align-items: center; gap: 12px; }
 .auth-logo-mark {
-  width: 42px; height: 42px; border: 1px solid var(--b3); border-radius: 10px;
+  width: 42px; height: 42px; border: 1px solid var(--b1); border-radius: 10px; background: var(--s1);
   display: flex; align-items: center; justify-content: center;
 }
 .auth-logo-mark svg { width: 20px; height: 20px; }
-.auth-wordmark { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; }
+.auth-wordmark { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; color: var(--text); }
 .auth-title { font-size: 13px; color: var(--muted2); font-family: 'JetBrains Mono', monospace; text-align: center; max-width: 320px; line-height: 1.8; }
 .auth-title span { color: var(--gold); }
 .auth-btn {
   display: flex; align-items: center; gap: 10px;
-  background: var(--gold); color: #0a0a0b;
+  background: var(--gold); color: #fff;
   border: none; border-radius: var(--r); padding: 13px 28px;
-  font-family: 'Bricolage Grotesque', sans-serif; font-size: 13px; font-weight: 600;
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
   cursor: pointer; transition: all 0.2s; letter-spacing: 0.02em;
 }
-.auth-btn:hover { background: var(--gold2); transform: translateY(-1px); }
+.auth-btn:hover { background: #1d4ed8; transform: translateY(-1px); }
 .auth-btn svg { width: 16px; height: 16px; }
 .auth-footnote { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
 #auth-error { color: var(--red); font-size: 11px; display: none; font-family: 'JetBrains Mono', monospace; }
@@ -81,7 +72,7 @@ body { font-family: 'Bricolage Grotesque', sans-serif; background: var(--bg); co
   display: none; flex-direction: column; align-items: center; justify-content: center;
   min-height: 100vh; gap: 16px;
 }
-.spinner { width: 24px; height: 24px; border: 1.5px solid var(--b2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; }
+.spinner { width: 24px; height: 24px; border: 1.5px solid var(--b1); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-text { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.06em; }
 
@@ -92,13 +83,12 @@ body { font-family: 'Bricolage Grotesque', sans-serif; background: var(--bg); co
 header {
   border-bottom: 1px solid var(--b1); padding: 0 28px; height: 52px;
   display: flex; align-items: center; justify-content: space-between;
-  position: sticky; top: 0; background: rgba(8,8,9,0.94);
-  backdrop-filter: blur(16px); z-index: 100;
+  position: sticky; top: 0; background: #fff; z-index: 100;
 }
 .hdr-left { display: flex; align-items: center; gap: 14px; }
-.hdr-mark { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); }
-.hdr-title { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
-.hdr-divider { width: 1px; height: 14px; background: var(--b2); }
+.hdr-mark { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+.hdr-title { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text); }
+.hdr-divider { width: 1px; height: 14px; background: var(--b1); }
 .hdr-ctx { font-size: 11px; color: var(--muted2); font-family: 'JetBrains Mono', monospace; }
 .hdr-right { display: flex; align-items: center; gap: 10px; }
 .hdr-week { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
@@ -108,12 +98,12 @@ header {
   font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.15s;
   letter-spacing: 0.08em; text-transform: uppercase;
 }
-.hdr-btn:hover { border-color: var(--b3); color: var(--text); }
+.hdr-btn:hover { border-color: var(--gold); color: var(--gold); }
 
 /* ── FILTERS ── */
 .filters {
   padding: 10px 28px; display: flex; gap: 6px; flex-wrap: wrap;
-  border-bottom: 1px solid var(--b1); background: var(--s1); align-items: center;
+  border-bottom: 1px solid var(--b1); background: #fff; align-items: center;
 }
 .filters select, .filters input {
   background: var(--s2); border: 1px solid var(--b1); color: var(--text);
@@ -121,11 +111,11 @@ header {
   font-family: 'JetBrains Mono', monospace; outline: none;
   transition: border-color 0.15s; -webkit-appearance: none; cursor: pointer;
 }
-.filters select:focus, .filters input:focus { border-color: rgba(200,169,110,0.4); }
-.filters select option { background: var(--s2); }
+.filters select:focus, .filters input:focus { border-color: var(--gold); }
+.filters select option { background: #fff; }
 .filters input::placeholder { color: var(--muted); }
 .filter-label { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; margin-left: 6px; }
-.filter-sep { width: 1px; height: 16px; background: var(--b2); margin: 0 4px; }
+.filter-sep { width: 1px; height: 16px; background: var(--b1); margin: 0 4px; }
 
 /* ── MAIN ── */
 main { padding: 20px 28px; max-width: 1440px; margin: 0 auto; }
@@ -133,35 +123,34 @@ main { padding: 20px 28px; max-width: 1440px; margin: 0 auto; }
 /* ── KPI ROW ── */
 .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 8px; }
 .kpi {
-  background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r);
+  background: var(--s1); border: 1px solid var(--b1); border-radius: 12px;
   padding: 16px 18px; position: relative; overflow: hidden; cursor: default;
   transition: border-color 0.2s;
 }
 .kpi:hover { border-color: var(--b2); }
-.kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--b2), transparent); }
 .kpi-label { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
-.kpi-val { font-size: 22px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; }
+.kpi-val { font-size: 22px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; color: var(--text); }
 .kpi-sub { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 5px; }
 .kpi-delta { font-size: 10px; font-family: 'JetBrains Mono', monospace; margin-top: 4px; }
-.up { color: var(--green); }
+.up { color: #16a34a; }
 .down { color: var(--red); }
 .neutral { color: var(--muted); }
 .accent-gold { color: var(--gold); }
 .accent-red { color: var(--red); }
-.accent-green { color: var(--green); }
+.accent-green { color: #16a34a; }
 .accent-blue { color: var(--blue); }
 .accent-purple { color: var(--purple); }
 
 /* ── CITY STRIPS ── */
 .city-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 16px; }
 .city-card {
-  background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r);
+  background: var(--s1); border: 1px solid var(--b1); border-radius: 12px;
   padding: 12px 14px; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden;
 }
 .city-card:hover { border-color: var(--b2); background: var(--s2); }
-.city-card.active { border-color: rgba(200,169,110,0.4); background: var(--s2); }
+.city-card.active { border-color: var(--gold); background: #eff6ff; }
 .city-card.active::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--gold); }
-.city-name { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; margin-bottom: 6px; }
+.city-name { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; margin-bottom: 6px; color: var(--muted3); }
 .city-revenue { font-size: 14px; font-weight: 700; letter-spacing: -0.03em; font-family: 'JetBrains Mono', monospace; color: var(--gold); }
 .city-meta { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 3px; }
 .city-tip-bar { margin-top: 6px; height: 2px; background: var(--b1); border-radius: 1px; overflow: hidden; }
@@ -171,18 +160,18 @@ main { padding: 20px 28px; max-width: 1440px; margin: 0 auto; }
 .chart-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
 .chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
 .chart-card {
-  background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r);
+  background: var(--s1); border: 1px solid var(--b1); border-radius: 12px;
   padding: 18px 20px;
 }
 .chart-title { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
-.chart-title-badge { font-size: 9px; color: var(--gold); background: var(--gold-dim); border: 1px solid rgba(200,169,110,0.2); border-radius: 4px; padding: 2px 6px; }
+.chart-title-badge { font-size: 9px; color: var(--gold); background: var(--gold-dim); border: 1px solid rgba(37,99,235,0.2); border-radius: 4px; padding: 2px 6px; }
 
 /* ── HEATMAP ── */
 .heatmap-grid { display: grid; grid-template-columns: 36px repeat(7, 1fr); gap: 3px; }
 .heatmap-header { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; text-align: center; padding: 2px 0; }
 .heatmap-label { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; text-align: right; padding: 2px 4px 2px 0; line-height: 20px; }
 .heatmap-cell {
-  height: 20px; border-radius: 3px; background: var(--s2);
+  height: 20px; border-radius: 3px; background: var(--s3);
   position: relative; cursor: default; transition: opacity 0.15s;
 }
 .heatmap-cell:hover { opacity: 0.8; }
@@ -191,7 +180,7 @@ main { padding: 20px 28px; max-width: 1440px; margin: 0 auto; }
 .heatmap-legend-stop { width: 16px; height: 8px; border-radius: 1px; }
 
 /* ── TABLE ── */
-.table-card { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r); overflow: hidden; }
+.table-card { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; overflow: hidden; }
 .table-hdr { padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--b1); }
 .table-hdr-title { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; }
 .table-hdr-count { font-size: 11px; color: var(--muted2); font-family: 'JetBrains Mono', monospace; }
@@ -205,9 +194,9 @@ th {
   white-space: nowrap; cursor: pointer; user-select: none; text-align: left;
 }
 th:hover { color: var(--muted3); }
-td { padding: 8px 12px; border-bottom: 1px solid var(--b1); font-size: 12px; vertical-align: middle; }
+td { padding: 8px 12px; border-bottom: 1px solid var(--b1); font-size: 12px; vertical-align: middle; color: var(--muted3); }
 tr:last-child td { border-bottom: none; }
-tr:hover td { background: rgba(255,255,255,0.012); }
+tr:hover td { background: var(--s2); }
 .mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
 .table-foot { padding: 8px 18px; font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; border-top: 1px solid var(--b1); background: var(--s2); display: flex; justify-content: space-between; }
 
@@ -217,93 +206,93 @@ tr:hover td { background: rgba(255,255,255,0.012); }
   font-family: 'JetBrains Mono', monospace; padding: 2px 7px;
   border-radius: 4px; font-weight: 500; letter-spacing: 0.04em; white-space: nowrap;
 }
-.b-success { background: var(--green-dim); color: #6dcc96; border: 1px solid rgba(74,158,110,0.2); }
-.b-fail { background: var(--red-dim); color: #e07070; border: 1px solid rgba(196,80,79,0.2); }
-.b-pending { background: rgba(200,169,110,0.1); color: var(--gold); border: 1px solid rgba(200,169,110,0.2); }
-.b-terminal { background: var(--blue-dim); color: #7aabdb; border: 1px solid rgba(74,127,196,0.2); }
-.b-online { background: rgba(138,110,196,0.1); color: #b09ee0; border: 1px solid rgba(138,110,196,0.2); }
+.b-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.b-fail { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.b-pending { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.b-terminal { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.b-online { background: #f5f3ff; color: #5b21b6; border: 1px solid #ddd6fe; }
 .tip-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--gold); }
 .tip-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); }
 
 /* ── TABS ── */
-.tab-bar { display: flex; gap: 0; padding: 0 28px; border-bottom: 1px solid var(--b1); background: var(--s1); }
-.tab-btn { background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--muted); padding: 10px 16px; font-size: 10px; font-family: 'JetBrains Mono', monospace; cursor: pointer; letter-spacing: 0.08em; text-transform: uppercase; transition: all 0.15s; margin-bottom: -1px; }
+.tab-bar { display: flex; gap: 0; padding: 0 28px; border-bottom: 1px solid var(--b1); background: #fff; }
+.tab-btn { background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--muted2); padding: 10px 16px; font-size: 10px; font-family: 'JetBrains Mono', monospace; cursor: pointer; letter-spacing: 0.08em; text-transform: uppercase; transition: all 0.15s; margin-bottom: -1px; }
 .tab-btn:hover { color: var(--text); }
 .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
 
 /* ── RECON TABLE ── */
 .recon-wrap { padding: 20px 28px; max-width: 1440px; margin: 0 auto; }
 .recon-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.recon-title { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted2); font-family: 'JetBrains Mono', monospace; }
+.recon-title { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted3); font-family: 'JetBrains Mono', monospace; }
 .recon-subtitle { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 3px; }
-.recon-table-wrap { overflow-x: auto; background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r); }
+.recon-table-wrap { overflow-x: auto; background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; }
 .recon-table { width: 100%; border-collapse: collapse; min-width: 500px; }
 .recon-th-lbl { padding: 10px 18px; font-size: 9px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); background: var(--s2); text-align: left; position: sticky; left: 0; z-index: 3; border-bottom: 1px solid var(--b1); white-space: nowrap; min-width: 240px; }
 .recon-th-val { padding: 10px 18px; font-size: 9px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); background: var(--s2); text-align: right; border-bottom: 1px solid var(--b1); white-space: nowrap; min-width: 110px; }
 .recon-th-val.ytd { color: var(--gold); }
 .recon-sec > td { background: var(--s2); border-top: 2px solid var(--b2); padding: 10px 18px; }
-.recon-sec .rc-lbl { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; position: sticky; left: 0; background: var(--s2); z-index: 2; white-space: nowrap; }
+.recon-sec .rc-lbl { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; position: sticky; left: 0; background: var(--s2); z-index: 2; white-space: nowrap; color: var(--text); }
 .recon-sec .rc-amt { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--gold); }
-.recon-row > td { padding: 7px 18px; border-bottom: 1px solid rgba(255,255,255,0.025); background: var(--s1); }
-.recon-row .rc-lbl { font-size: 11px; color: var(--muted3); padding-left: 30px !important; position: sticky; left: 0; background: var(--s1); z-index: 2; white-space: nowrap; }
-.recon-row .rc-amt { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted2); }
-.recon-row .rc-amt.ytd { color: var(--muted3); }
+.recon-row > td { padding: 7px 18px; border-bottom: 1px solid var(--b1); background: var(--s1); }
+.recon-row .rc-lbl { font-size: 11px; color: var(--muted2); padding-left: 30px !important; position: sticky; left: 0; background: var(--s1); z-index: 2; white-space: nowrap; }
+.recon-row .rc-amt { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted3); }
+.recon-row .rc-amt.ytd { color: var(--muted2); }
 .recon-gap > td { height: 6px; background: var(--bg); padding: 0; border: none; }
-.recon-tot > td { background: var(--gold-dim); border-top: 1px solid rgba(200,169,110,0.3); border-bottom: 1px solid rgba(200,169,110,0.3); padding: 12px 18px; }
+.recon-tot > td { background: var(--gold-dim); border-top: 1px solid rgba(37,99,235,0.2); border-bottom: 1px solid rgba(37,99,235,0.2); padding: 12px 18px; }
 .recon-tot .rc-lbl { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); position: sticky; left: 0; background: var(--gold-dim); z-index: 2; white-space: nowrap; }
 .recon-tot .rc-amt { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--gold); }
-.recon-city > td { padding: 8px 18px; background: var(--s1); border-bottom: 1px solid rgba(255,255,255,0.025); }
-.recon-city .rc-lbl { font-size: 11px; color: var(--muted2); font-weight: 600; padding-left: 18px !important; position: sticky; left: 0; background: var(--s1); z-index: 2; white-space: nowrap; }
+.recon-city > td { padding: 8px 18px; background: var(--s1); border-bottom: 1px solid var(--b1); }
+.recon-city .rc-lbl { font-size: 11px; color: var(--muted3); font-weight: 600; padding-left: 18px !important; position: sticky; left: 0; background: var(--s1); z-index: 2; white-space: nowrap; }
 .recon-city .rc-amt { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--text); }
 .recon-city .rc-amt.ytd { color: var(--gold); }
-.recon-pct > td { padding: 6px 18px; background: var(--s1); border-bottom: 1px solid rgba(255,255,255,0.015); }
+.recon-pct > td { padding: 6px 18px; background: var(--s1); border-bottom: 1px solid rgba(0,0,0,0.04); }
 .recon-pct .rc-lbl { font-size: 10px; color: var(--muted); padding-left: 18px !important; position: sticky; left: 0; background: var(--s1); z-index: 2; white-space: nowrap; font-family: 'JetBrains Mono', monospace; }
 .recon-pct .rc-amt { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); }
 .recon-note { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 12px; line-height: 1.7; }
 .recon-charts-section { margin-top: 36px; display: flex; flex-direction: column; gap: 32px; }
-.recon-chart-block { background: var(--s1); border: 1px solid var(--b1); border-radius: var(--r); padding: 24px 28px; }
+.recon-chart-block { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; padding: 24px 28px; }
 .recon-chart-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 20px; }
 /* Target progress cards */
 .target-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-.target-card { background: var(--s2); border: 1px solid var(--b1); border-radius: 10px; padding: 18px 20px; position: relative; overflow: hidden; }
+.target-card { background: var(--s2); border: 1px solid var(--b1); border-radius: 12px; padding: 18px 20px; position: relative; overflow: hidden; }
 .target-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
 .target-city { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted2); }
-.target-pct { font-size: 26px; font-weight: 700; font-family: 'Bricolage Grotesque', sans-serif; letter-spacing: -0.5px; }
-.target-pct.low  { color: #e05252; }
-.target-pct.mid  { color: #c8a96e; }
-.target-pct.done { color: #4a9e6e; }
-.target-bar-wrap { height: 5px; background: rgba(255,255,255,0.07); border-radius: 99px; overflow: hidden; margin-bottom: 14px; }
+.target-pct { font-size: 26px; font-weight: 700; font-family: 'Inter', sans-serif; letter-spacing: -0.5px; }
+.target-pct.low  { color: #dc2626; }
+.target-pct.mid  { color: #d97706; }
+.target-pct.done { color: #16a34a; }
+.target-bar-wrap { height: 5px; background: var(--b1); border-radius: 99px; overflow: hidden; margin-bottom: 14px; }
 .target-bar-fill { height: 100%; border-radius: 99px; transition: width 0.8s cubic-bezier(.4,0,.2,1); }
-.target-bar-fill.low  { background: linear-gradient(90deg, #7f1d1d 0%, #e05252 100%); box-shadow: 0 0 8px rgba(224,82,82,0.4); }
-.target-bar-fill.mid  { background: linear-gradient(90deg, #c0392b 0%, #c8a96e 100%); box-shadow: 0 0 8px rgba(200,169,110,0.3); }
-.target-bar-fill.done { background: #4a9e6e; box-shadow: 0 0 8px rgba(74,158,110,0.4); }
+.target-bar-fill.low  { background: linear-gradient(90deg, #fca5a5 0%, #dc2626 100%); }
+.target-bar-fill.mid  { background: linear-gradient(90deg, #fde68a 0%, #d97706 100%); }
+.target-bar-fill.done { background: #16a34a; }
 .target-amounts { display: flex; justify-content: space-between; align-items: baseline; }
-.target-current { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--fg); font-weight: 600; }
+.target-current { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); font-weight: 600; }
 .target-goal { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); }
 .target-remaining { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); margin-top: 6px; text-align: right; }
 .target-no-data { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); padding: 16px 0; text-align: center; }
 .recon-tip {
   position: fixed; z-index: 9999; pointer-events: none; display: none;
-  background: var(--s3); border: 1px solid var(--b3); border-radius: 7px;
+  background: var(--s1); border: 1px solid var(--b2); border-radius: 7px;
   padding: 9px 13px; max-width: 380px;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.55);
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.07);
 }
 .recon-tip-title { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--gold); font-weight: 600; margin-bottom: 5px; }
-.recon-tip-line { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--muted3); line-height: 1.7; }
-.recon-tip-line span { color: var(--muted2); }
+.recon-tip-line { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--muted2); line-height: 1.7; }
+.recon-tip-line span { color: var(--muted3); }
 .rc-lbl[data-tip] { cursor: help; }
 
 /* ── DONUT LEGEND ── */
 .donut-wrap { display: flex; align-items: center; gap: 20px; }
 .donut-canvas-wrap { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
 .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
-.donut-center-val { font-size: 18px; font-weight: 700; letter-spacing: -0.04em; }
+.donut-center-val { font-size: 18px; font-weight: 700; letter-spacing: -0.04em; color: var(--text); }
 .donut-center-lbl { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
 .donut-legend { display: flex; flex-direction: column; gap: 7px; flex: 1; }
 .donut-item { display: flex; align-items: center; gap: 7px; font-size: 11px; }
 .donut-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-.donut-name { color: var(--muted3); flex: 1; font-size: 10px; }
-.donut-pct { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted2); }
+.donut-name { color: var(--muted2); flex: 1; font-size: 10px; }
+.donut-pct { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted3); }
 .donut-amt { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
 </style>
 </head>
@@ -315,7 +304,7 @@ tr:hover td { background: rgba(255,255,255,0.012); }
   <div class="auth-logo">
     <div class="auth-logo-mark">
       <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M3 16L7 8L10 13L13 6L17 16" stroke="#c8a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M3 16L7 8L10 13L13 6L17 16" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
     <div class="auth-wordmark">WoodCutter</div>
@@ -370,12 +359,12 @@ tr:hover td { background: rgba(255,255,255,0.012); }
     </select>
     <div class="filter-sep"></div>
     <input type="date" id="f-date-from" onchange="onDateRangeFilter()"
-      style="background:var(--s3);border:1px solid var(--b2);border-radius:6px;color:var(--muted3);font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 10px;cursor:pointer;outline:none;">
+      style="background:var(--s2);border:1px solid var(--b1);border-radius:6px;color:var(--muted3);font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 10px;cursor:pointer;outline:none;">
     <span style="color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace;">→</span>
     <input type="date" id="f-date-to" onchange="onDateRangeFilter()"
-      style="background:var(--s3);border:1px solid var(--b2);border-radius:6px;color:var(--muted3);font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 10px;cursor:pointer;outline:none;">
+      style="background:var(--s2);border:1px solid var(--b1);border-radius:6px;color:var(--muted3);font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 10px;cursor:pointer;outline:none;">
     <button onclick="clearDateRange()"
-      style="background:transparent;border:1px solid var(--b2);border-radius:6px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 10px;cursor:pointer;display:none;" id="f-date-clear">✕ clear</button>
+      style="background:transparent;border:1px solid var(--b1);border-radius:6px;color:var(--muted2);font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 10px;cursor:pointer;display:none;" id="f-date-clear">✕ clear</button>
   </div>
 
   <!-- REVENUE SPLIT VIEW -->
@@ -388,7 +377,7 @@ tr:hover td { background: rgba(255,255,255,0.012); }
         </div>
         <div style="display:flex;align-items:center;gap:10px">
           <label style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em">Venue</label>
-          <select id="venue-select" onchange="onVenueChange()" style="background:var(--s3);border:1px solid var(--b2);border-radius:6px;color:var(--fg);font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 12px;cursor:pointer;outline:none">
+          <select id="venue-select" onchange="onVenueChange()" style="background:var(--s2);border:1px solid var(--b1);border-radius:6px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 12px;cursor:pointer;outline:none">
             <option value="Belgium">Belgium (Brussels &amp; Anvers)</option>
             <option value="Berlin">Berlin</option>
             <option value="Frankfurt">Frankfurt</option>
@@ -514,7 +503,7 @@ tr:hover td { background: rgba(255,255,255,0.012); }
         <div class="table-hdr-title">Daily Tips Breakdown</div>
         <div style="display:flex;align-items:center;gap:8px">
           <div class="table-hdr-count" id="tips-count"></div>
-          <button onclick="exportTipsCSV()" style="background:var(--gold);color:#0a0a0b;border:none;border-radius:6px;padding:5px 14px;font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700;cursor:pointer;letter-spacing:0.06em;text-transform:uppercase">↓ Export CSV</button>
+          <button onclick="exportTipsCSV()" style="background:var(--gold);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700;cursor:pointer;letter-spacing:0.06em;text-transform:uppercase">↓ Export CSV</button>
         </div>
       </div>
       <div class="table-wrap" style="max-height:400px">
@@ -603,15 +592,15 @@ const TARGETS = {
 
 // Fixed color per venue for radar + charts
 const VENUE_COLORS = {
-  'Belgium':   '#c8a96e',
-  'Brussels':  '#c8a96e',
-  'Anvers':    '#4a7fc4',
-  'Berlin':    '#4a9e6e',
-  'Frankfurt': '#8a6ec4',
-  'Hamburg':   '#c47a4a',
-  'Koln':      '#4abcbc',
-  'Leipzig':          '#bc84c4',
-  'Shooters Brussels':'#4abcbc',
+  'Belgium':   '#2563eb',
+  'Brussels':  '#2563eb',
+  'Anvers':    '#0891b2',
+  'Berlin':    '#16a34a',
+  'Frankfurt': '#7c3aed',
+  'Hamburg':   '#ea580c',
+  'Koln':      '#0d9488',
+  'Leipzig':   '#db2777',
+  'Shooters Brussels':'#0d9488',
 };
 
 let sortCol = 'date', sortAsc = false;
@@ -714,7 +703,7 @@ async function loadData() {
     renderRecon();
   } catch (e) {
     show('dashboard');
-    document.querySelector('main').innerHTML = `<div style="background:var(--red-dim);border:1px solid rgba(196,80,79,0.25);border-radius:var(--r);padding:16px 20px;color:#e07070;font-size:12px;margin:32px 0;font-family:'JetBrains Mono',monospace">⚠ ${e.message}</div>`;
+    document.querySelector('main').innerHTML = `<div style="background:var(--red-dim);border:1px solid rgba(220,38,38,0.2);border-radius:var(--r);padding:16px 20px;color:#991b1b;font-size:12px;margin:32px 0;font-family:'JetBrains Mono',monospace">⚠ ${e.message}</div>`;
   }
 }
 
@@ -1182,8 +1171,8 @@ function toggleCity(city) {
 
 // ── CHARTS ────────────────────────────────────────────
 function renderCharts(succeeded) {
-  const gridColor = 'rgba(255,255,255,0.04)';
-  const tickColor = '#444';
+  const gridColor = 'rgba(0,0,0,0.05)';
+  const tickColor = '#9ca3af';
   const baseScale = {
     grid: { color: gridColor },
     ticks: { color: tickColor, font: { size: 10, family: 'JetBrains Mono, monospace' } }
@@ -1192,7 +1181,7 @@ function renderCharts(succeeded) {
   // ── Trend chart — one line per city ──
   const activeCities = [...new Set(succeeded.map(r => r.city))].sort();
   const allWeeks = [...new Set(succeeded.map(r => r.week))].sort((a, b) => a - b);
-  const trendCityColors = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc','#4ab87a','#bc84c4'];
+  const trendCityColors = ['#2563eb','#0891b2','#16a34a','#7c3aed','#ea580c','#0d9488','#db2777','#d97706','#64748b'];
   const trendDatasets = activeCities.map((city, i) => {
     const cityRows = succeeded.filter(r => r.city === city);
     const weekMap = {};
@@ -1219,7 +1208,7 @@ function renderCharts(succeeded) {
         legend: {
           display: true,
           position: 'top',
-          labels: { color: '#666', font: { size: 10, family: 'JetBrains Mono, monospace' }, boxWidth: 10, padding: 12 }
+          labels: { color: '#6b7280', font: { size: 10, family: 'JetBrains Mono, monospace' }, boxWidth: 10, padding: 12 }
         }
       },
       scales: {
@@ -1242,14 +1231,14 @@ function renderCharts(succeeded) {
     type: 'doughnut',
     data: {
       labels: ['In-store', 'Online'],
-      datasets: [{ data: [Math.round(inStoreRev), Math.round(onlineRev)], backgroundColor: ['#4a7fc4', '#8a6ec4'], borderWidth: 0, hoverOffset: 4 }]
+      datasets: [{ data: [Math.round(inStoreRev), Math.round(onlineRev)], backgroundColor: ['#2563eb', '#7c3aed'], borderWidth: 0, hoverOffset: 4 }]
     },
     options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false } } }
   });
   document.getElementById('type-center-val').textContent = succeeded.length.toLocaleString();
   document.getElementById('type-legend').innerHTML = [
-    { name: 'In-store', color: '#4a7fc4', rev: inStoreRev, pct: totalRev > 0 ? inStoreRev/totalRev*100 : 0 },
-    { name: 'Online', color: '#8a6ec4', rev: onlineRev, pct: totalRev > 0 ? onlineRev/totalRev*100 : 0 }
+    { name: 'In-store', color: '#2563eb', rev: inStoreRev, pct: totalRev > 0 ? inStoreRev/totalRev*100 : 0 },
+    { name: 'Online', color: '#7c3aed', rev: onlineRev, pct: totalRev > 0 ? onlineRev/totalRev*100 : 0 }
   ].map(item => `<div class="donut-item">
     <div class="donut-dot" style="background:${item.color}"></div>
     <span class="donut-name">${item.name}</span>
@@ -1265,7 +1254,7 @@ function renderCharts(succeeded) {
     type: 'doughnut',
     data: {
       labels: ['With tip', 'No tip'],
-      datasets: [{ data: [tipCount, noTipCount], backgroundColor: ['#c8a96e', '#1a1a1f'], borderWidth: 0, hoverOffset: 4 }]
+      datasets: [{ data: [tipCount, noTipCount], backgroundColor: ['#2563eb', '#e5e7eb'], borderWidth: 0, hoverOffset: 4 }]
     },
     options: {
       responsive: true, maintainAspectRatio: false, cutout: '72%',
@@ -1276,8 +1265,8 @@ function renderCharts(succeeded) {
   const totalTips2 = succeeded.reduce((s, r) => s + r.tip_amount, 0);
   const avgTip2 = tipCount > 0 ? totalTips2 / tipCount : 0;
   document.getElementById('tip-legend').innerHTML = `
-    <div class="donut-item"><div class="donut-dot" style="background:#c8a96e"></div><span class="donut-name">With tip</span><span class="donut-pct">${tipCount.toLocaleString()}</span></div>
-    <div class="donut-item"><div class="donut-dot" style="background:#1a1a1f;border:1px solid #333"></div><span class="donut-name">No tip</span><span class="donut-pct">${noTipCount.toLocaleString()}</span></div>
+    <div class="donut-item"><div class="donut-dot" style="background:#2563eb"></div><span class="donut-name">With tip</span><span class="donut-pct">${tipCount.toLocaleString()}</span></div>
+    <div class="donut-item"><div class="donut-dot" style="background:#e5e7eb;border:1px solid #d1d5db"></div><span class="donut-name">No tip</span><span class="donut-pct">${noTipCount.toLocaleString()}</span></div>
     <div class="donut-item" style="margin-top:4px;padding-top:4px;border-top:1px solid var(--b1)"><span class="donut-name" style="color:var(--gold)">Avg tip</span><span class="donut-amt" style="color:var(--gold)">${fmtCur(avgTip2)}</span></div>
   `;
 
@@ -1310,7 +1299,7 @@ function renderFnbRevenue() {
   );
   const branches = [...new Set(fnbRows.map(r => r.branch))].sort();
   const months   = [...new Set(fnbRows.map(r => r.month))].filter(Boolean).sort();
-  const colors   = ['#c8a96e','#4a7fc4','#4a9e6e','#8a6ec4','#c4504f','#c47a4a','#4abcbc','#4ab87a','#bc84c4'];
+  const colors   = ['#2563eb','#0891b2','#16a34a','#7c3aed','#ea580c','#0d9488','#db2777','#d97706','#64748b'];
 
   const datasets = branches.map((branch, i) => {
     const monthMap = {};
@@ -1339,12 +1328,12 @@ function renderFnbRevenue() {
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { display: true, position: 'top', labels: { color: '#666', font: { size: 10, family: 'JetBrains Mono, monospace' }, boxWidth: 10, padding: 12 } }
+        legend: { display: true, position: 'top', labels: { color: '#6b7280', font: { size: 10, family: 'JetBrains Mono, monospace' }, boxWidth: 10, padding: 12 } }
       },
       scales: {
-        x: { stacked: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#444', font: { size: 10, family: 'JetBrains Mono, monospace' } } },
-        y: { stacked: true, grid: { color: 'rgba(255,255,255,0.04)' }, beginAtZero: true,
-             ticks: { color: '#444', font: { size: 10, family: 'JetBrains Mono, monospace' }, callback: v => '€' + (v >= 1000 ? Math.round(v/1000) + 'k' : v) } }
+        x: { stacked: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#9ca3af', font: { size: 10, family: 'JetBrains Mono, monospace' } } },
+        y: { stacked: true, grid: { color: 'rgba(0,0,0,0.05)' }, beginAtZero: true,
+             ticks: { color: '#9ca3af', font: { size: 10, family: 'JetBrains Mono, monospace' }, callback: v => '€' + (v >= 1000 ? Math.round(v/1000) + 'k' : v) } }
       }
     }
   });
@@ -1649,21 +1638,21 @@ function renderPaceChart(venue, grandTotal, allMonths) {
     const antMap = cityMonthly('Anvers',   1.21);
     if (TARGETS['Brussels']) datasets.push({
       label: 'Brussels target', data: allYear.map((_,i) => Math.round(TARGETS['Brussels']/12*(i+1))),
-      borderColor:'rgba(200,169,110,0.25)', borderDash:[5,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0,
+      borderColor:'rgba(37,99,235,0.25)', borderDash:[5,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0,
     });
     if (TARGETS['Anvers']) datasets.push({
       label: 'Anvers target', data: allYear.map((_,i) => Math.round(TARGETS['Anvers']/12*(i+1))),
-      borderColor:'rgba(107,140,174,0.25)', borderDash:[5,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0,
+      borderColor:'rgba(14,165,233,0.25)', borderDash:[5,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0,
     });
     datasets.push({
       label: 'Brussels (actual)', data: cumLine(bxlMap),
-      borderColor:'#c8a96e', backgroundColor:'rgba(200,169,110,0.08)',
-      borderWidth:2, pointRadius:3, pointBackgroundColor:'#c8a96e', fill:true, tension:0.3, spanGaps:false,
+      borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,0.08)',
+      borderWidth:2, pointRadius:3, pointBackgroundColor:'#2563eb', fill:true, tension:0.3, spanGaps:false,
     });
     datasets.push({
       label: 'Anvers (actual)', data: cumLine(antMap),
-      borderColor:'#6b8cae', backgroundColor:'rgba(107,140,174,0.05)',
-      borderWidth:2, pointRadius:3, pointBackgroundColor:'#6b8cae', fill:false, tension:0.3, spanGaps:false,
+      borderColor:'#0891b2', backgroundColor:'rgba(8,145,178,0.08)',
+      borderWidth:2, pointRadius:3, pointBackgroundColor:'#0891b2', fill:false, tension:0.3, spanGaps:false,
     });
     document.getElementById('pace-label').textContent = 'YTD Revenue Pace vs Annual Target — Brussels & Anvers';
   } else {
@@ -1671,12 +1660,12 @@ function renderPaceChart(venue, grandTotal, allMonths) {
     const venueTgt = TARGETS[venue] || null;
     if (venueTgt) datasets.push({
       label: 'Target pace', data: allYear.map((_,i) => Math.round(venueTgt/12*(i+1))),
-      borderColor:'rgba(255,255,255,0.2)', borderDash:[5,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0,
+      borderColor:'rgba(0,0,0,0.15)', borderDash:[5,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0,
     });
     datasets.push({
       label: 'Actual (cumulative)', data: cumLine(grandTotal),
-      borderColor:'#c8a96e', backgroundColor:'rgba(200,169,110,0.08)',
-      borderWidth:2, pointRadius:3, pointBackgroundColor:'#c8a96e', fill:true, tension:0.3, spanGaps:false,
+      borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,0.08)',
+      borderWidth:2, pointRadius:3, pointBackgroundColor:'#2563eb', fill:true, tension:0.3, spanGaps:false,
     });
     document.getElementById('pace-label').textContent =
       `YTD Revenue Pace vs Annual Target — ${venue}` +
@@ -1690,13 +1679,13 @@ function renderPaceChart(venue, grandTotal, allMonths) {
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { position:'top', labels:{ color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}, boxWidth:10, padding:16 } },
+        legend: { position:'top', labels:{ color:'#6b7280', font:{family:"'JetBrains Mono',monospace",size:10}, boxWidth:10, padding:16 } },
         tooltip: { callbacks:{ label: ctx => `${ctx.dataset.label}: ${fmtCurShort(ctx.raw)}` } }
       },
       scales: {
-        x: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}} },
-        y: { grid:{color:'rgba(255,255,255,0.04)'}, border:{dash:[2,4]}, beginAtZero:true,
-             ticks:{color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}, callback: v => fmtCurShort(v)} }
+        x: { grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#9ca3af', font:{family:"'JetBrains Mono',monospace",size:10}} },
+        y: { grid:{color:'rgba(0,0,0,0.05)'}, border:{dash:[2,4]}, beginAtZero:true,
+             ticks:{color:'#9ca3af', font:{family:"'JetBrains Mono',monospace",size:10}, callback: v => fmtCurShort(v)} }
       }
     }
   });
@@ -1705,10 +1694,10 @@ function renderPaceChart(venue, grandTotal, allMonths) {
 // Chart 2: Revenue Stream Composition Donut
 function renderStreamDonut(invTotal, posTotal, strTotal, tipTotal) {
   const segments = [
-    { label:'Invoices',     value: Math.round(invTotal.YTD||0), color:'#c8a96e' },
-    { label:'POS (Odoo)',   value: Math.round(posTotal.YTD||0), color:'#6b8cae' },
-    { label:'Stripe Online',value: Math.round(strTotal.YTD||0), color:'#4a9e6e' },
-    { label:'Tips',         value: Math.round(tipTotal.YTD||0), color:'#8a6ec4' },
+    { label:'Invoices',     value: Math.round(invTotal.YTD||0), color:'#2563eb' },
+    { label:'POS (Odoo)',   value: Math.round(posTotal.YTD||0), color:'#0891b2' },
+    { label:'Stripe Online',value: Math.round(strTotal.YTD||0), color:'#16a34a' },
+    { label:'Tips',         value: Math.round(tipTotal.YTD||0), color:'#7c3aed' },
   ].filter(s => s.value > 0);
 
   if (charts.streamDonut) charts.streamDonut.destroy();
@@ -1723,7 +1712,7 @@ function renderStreamDonut(invTotal, posTotal, strTotal, tipTotal) {
       responsive: true, maintainAspectRatio: false,
       cutout: '62%',
       plugins: {
-        legend: { position:'bottom', labels:{ color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}, boxWidth:10, padding:14 } },
+        legend: { position:'bottom', labels:{ color:'#6b7280', font:{family:"'JetBrains Mono',monospace",size:10}, boxWidth:10, padding:14 } },
         tooltip: { callbacks: { label: ctx => {
           const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
           return `${ctx.label}: ${fmtCurShort(ctx.raw)} (${(ctx.raw/total*100).toFixed(1)}%)`;
@@ -1746,7 +1735,7 @@ function renderInvoicePipeline(venue) {
   });
 
   const order  = ['Paid','In Payment','Not Paid','Partial'];
-  const colors = { 'Paid':'#4a9e6e', 'In Payment':'#c8a96e', 'Not Paid':'#c0392b', 'Partial':'#8a6ec4' };
+  const colors = { 'Paid':'#16a34a', 'In Payment':'#2563eb', 'Not Paid':'#dc2626', 'Partial':'#7c3aed' };
   const active = order.filter(k => groups[k] > 0.5);
 
   document.getElementById('pipeline-label').textContent = `Invoice Payment Pipeline — ${venue}`;
@@ -1765,7 +1754,7 @@ function renderInvoicePipeline(venue) {
       responsive: true, maintainAspectRatio: false,
       cutout: '62%',
       plugins: {
-        legend: { position:'bottom', labels:{ color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}, boxWidth:10, padding:14 } },
+        legend: { position:'bottom', labels:{ color:'#6b7280', font:{family:"'JetBrains Mono',monospace",size:10}, boxWidth:10, padding:14 } },
         tooltip: { callbacks: { label: ctx => {
           const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
           return `${ctx.label}: ${fmtCurShort(ctx.raw)} (${(ctx.raw/total*100).toFixed(1)}%)`;
@@ -1891,7 +1880,7 @@ function renderCityTips() {
   if (charts.cityTips) charts.cityTips.destroy();
   charts.cityTips = new Chart(document.getElementById('chart-city-tips'), {
     type: 'bar',
-    data: { labels: lbls, datasets: [{ label:'Tips', data:vals, backgroundColor:'rgba(200,169,110,0.7)', borderColor:'#c8a96e', borderWidth:1, borderRadius:3 }] },
+    data: { labels: lbls, datasets: [{ label:'Tips', data:vals, backgroundColor:'rgba(37,99,235,0.7)', borderColor:'#2563eb', borderWidth:1, borderRadius:3 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
@@ -1899,9 +1888,9 @@ function renderCityTips() {
         tooltip: { callbacks: { label: ctx => `Tips: ${fmtCurShort(ctx.raw)}` } }
       },
       scales: {
-        x: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}} },
-        y: { grid:{color:'rgba(255,255,255,0.04)'}, border:{dash:[2,4]}, beginAtZero:true,
-             ticks:{color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}, callback: v => fmtCurShort(v)} }
+        x: { grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#9ca3af', font:{family:"'JetBrains Mono',monospace",size:10}} },
+        y: { grid:{color:'rgba(0,0,0,0.05)'}, border:{dash:[2,4]}, beginAtZero:true,
+             ticks:{color:'#9ca3af', font:{family:"'JetBrains Mono',monospace",size:10}, callback: v => fmtCurShort(v)} }
       }
     }
   });
@@ -1926,7 +1915,7 @@ function renderCityFnb() {
   if (charts.cityFnb) charts.cityFnb.destroy();
   charts.cityFnb = new Chart(document.getElementById('chart-city-fnb'), {
     type: 'bar',
-    data: { labels: lbls, datasets: [{ label:'F&B Revenue', data:vals, backgroundColor:'rgba(107,140,174,0.7)', borderColor:'#6b8cae', borderWidth:1, borderRadius:3 }] },
+    data: { labels: lbls, datasets: [{ label:'F&B Revenue', data:vals, backgroundColor:'rgba(8,145,178,0.7)', borderColor:'#0891b2', borderWidth:1, borderRadius:3 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
@@ -1934,9 +1923,9 @@ function renderCityFnb() {
         tooltip: { callbacks: { label: ctx => `F&B: ${fmtCurShort(ctx.raw)}` } }
       },
       scales: {
-        x: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}} },
-        y: { grid:{color:'rgba(255,255,255,0.04)'}, border:{dash:[2,4]}, beginAtZero:true,
-             ticks:{color:'#888', font:{family:"'JetBrains Mono',monospace",size:10}, callback: v => fmtCurShort(v)} }
+        x: { grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#9ca3af', font:{family:"'JetBrains Mono',monospace",size:10}} },
+        y: { grid:{color:'rgba(0,0,0,0.05)'}, border:{dash:[2,4]}, beginAtZero:true,
+             ticks:{color:'#9ca3af', font:{family:"'JetBrains Mono',monospace",size:10}, callback: v => fmtCurShort(v)} }
       }
     }
   });
