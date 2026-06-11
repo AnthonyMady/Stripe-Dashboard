@@ -1374,13 +1374,16 @@ function renderTopProducts() {
   const activeCity  = document.getElementById('f-city').value;
   const activeWeek  = document.getElementById('f-week').value;
   const activeMonth = document.getElementById('f-month').value;
+  const df = getDateFilter();
 
-  const fnbRows = ODOO_ROWS.filter(r =>
-    isFnB(r) &&
-    (!activeCity  || r.branch === activeCity) &&
-    (!activeWeek  || r.week   === parseInt(activeWeek)) &&
-    (!activeMonth || r.month  === activeMonth)
-  );
+  const fnbRows = ODOO_ROWS.filter(r => {
+    if (!isFnB(r)) return false;
+    if (activeCity && r.branch !== activeCity) return false;
+    if (df.active) return inDateRange(r.dateObj, df);
+    if (activeWeek  && r.week  !== parseInt(activeWeek))  return false;
+    if (activeMonth && r.month !== activeMonth)            return false;
+    return true;
+  });
   const branches = [...new Set(fnbRows.map(r => r.branch))].sort();
 
   let totalProducts = 0;
