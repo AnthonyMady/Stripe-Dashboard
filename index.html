@@ -784,7 +784,7 @@ function parseOdooFull(content, filename) {
     const dateObj = dateStr ? new Date(dateStr.substring(0, 10)) : null;
     const week = dateObj && !isNaN(dateObj) ? isoWeekOf(dateObj) : null;
 
-    rows.push({ branch, venue: fileBranch, month, week, pos,
+    rows.push({ branch, venue: fileBranch, month, week, pos, dateObj,
       product:  obj['Product'] || '',
       category: obj['Product Category'] || '',
       qty, revenue });
@@ -995,6 +995,22 @@ function clearDateRange() {
   applyFilters();
 }
 
+function getDateFilter() {
+  const fromVal = document.getElementById('f-date-from').value;
+  const toVal   = document.getElementById('f-date-to').value;
+  return {
+    fromDate: fromVal ? new Date(fromVal + 'T00:00:00') : null,
+    toDate:   toVal   ? new Date(toVal   + 'T23:59:59') : null,
+    active:   !!(fromVal || toVal)
+  };
+}
+function inDateRange(dateObj, df) {
+  if (!dateObj || isNaN(dateObj)) return false;
+  if (df.fromDate && dateObj < df.fromDate) return false;
+  if (df.toDate   && dateObj > df.toDate)   return false;
+  return true;
+}
+
 function applyFilters() {
   const city    = document.getElementById('f-city').value;
   const week    = document.getElementById('f-week').value;
@@ -1025,6 +1041,7 @@ function applyFilters() {
   renderTopProducts();
   renderTips();
   renderFeeAnalysis();
+  if (currentReconVenue) renderRecon(currentReconVenue);
 }
 
 // ── SORT ──────────────────────────────────────────────
@@ -1290,13 +1307,16 @@ function renderFnbRevenue() {
   const activeCity  = document.getElementById('f-city').value;
   const activeWeek  = document.getElementById('f-week').value;
   const activeMonth = document.getElementById('f-month').value;
+  const df = getDateFilter();
 
-  const fnbRows = ODOO_ROWS.filter(r =>
-    isFnB(r) &&
-    (!activeCity  || r.branch === activeCity) &&
-    (!activeWeek  || r.week   === parseInt(activeWeek)) &&
-    (!activeMonth || r.month  === activeMonth)
-  );
+  const fnbRows = ODOO_ROWS.filter(r => {
+    if (!isFnB(r)) return false;
+    if (activeCity && r.branch !== activeCity) return false;
+    if (df.active) return inDateRange(r.dateObj, df);
+    if (activeWeek  && r.week  !== parseInt(activeWeek))  return false;
+    if (activeMonth && r.month !== activeMonth)            return false;
+    return true;
+  });
   const branches = [...new Set(fnbRows.map(r => r.branch))].sort();
   const months   = [...new Set(fnbRows.map(r => r.month))].filter(Boolean).sort();
   const colors   = ['#2563eb','#0891b2','#16a34a','#7c3aed','#ea580c','#0d9488','#db2777','#d97706','#64748b'];
@@ -1569,6 +1589,7 @@ function parseInvoiceFull(content, venue) {
     const paymentStatus = statusIdx >= 0 ? (vals[statusIdx] || '').trim().replace(/^"|"$/g, '') : '';
     const amount  = parseFloat(totStr.replace(',', '.')) || 0;
     const month   = dateStr.length >= 7 ? dateStr.substring(0, 7) : '';
+    const dateObj = dateStr ? new Date(dateStr.substring(0, 10)) : null;
     if (!month || amount <= 0) continue;
 
     const jl = journal.toLowerCase();
@@ -1586,7 +1607,7 @@ function parseInvoiceFull(content, venue) {
     // Category from journal name keywords (applies to all venues)
     const category = (jl.includes('food') || jl.includes('beverage') || jl.includes('f&b') || jl.includes('fnb')) ? 'F&B' : 'Activité';
 
-    rows.push({ month, city, venue, category, journal, amount, paymentStatus });
+    rows.push({ month, city, venue, category, journal, amount, paymentStatus, dateObj });
   }
   return rows;
 }
@@ -1724,7 +1745,8 @@ function renderStreamDonut(invTotal, posTotal, strTotal, tipTotal) {
 
 // Chart 4: Invoice Payment Pipeline
 function renderInvoicePipeline(venue) {
-  const venueInv = INVOICE_ROWS.filter(r => r.venue === venue);
+  const df = getDateFilter();
+  const venueInv = INVOICE_ROWS.filter(r => r.venue === venue && (!df.active || inDateRange(r.dateObj, df)));
   const groups   = { 'Paid':0, 'In Payment':0, 'Not Paid':0, 'Partial':0 };
   venueInv.forEach(r => {
     const s = r.paymentStatus || '';
@@ -1862,14 +1884,17 @@ function prevMonthLabel() {
 
 // ── RENDER: TIPS PER CITY ────────────────────────────────────────────────────
 function renderCityTips() {
+  const df    = getDateFilter();
   const m     = prevMonthKey();
-  const label = prevMonthLabel();
+  const label = df.active
+    ? `${document.getElementById('f-date-from').value || '…'} → ${document.getElementById('f-date-to').value || '…'}`
+    : prevMonthLabel();
   document.getElementById('city-tips-label').textContent = `Tips by City — ${label}`;
 
   const isSucc = r => r.status === 'paid' || r.status === 'succeeded';
   const cities = ['Brussels','Anvers','Berlin','Frankfurt','Hamburg','Koln','Leipzig'];
   const data   = cities.map(city =>
-    Math.round(RAW.filter(r => isSucc(r) && r.city === city && r.month === m)
+    Math.round(RAW.filter(r => isSucc(r) && r.city === city && (df.active ? inDateRange(r.dateObj, df) : r.month === m))
       .reduce((s,r) => s + (r.tip_amount||0), 0))
   );
 
@@ -1898,13 +1923,16 @@ function renderCityTips() {
 
 // ── RENDER: F&B REVENUE PER CITY ─────────────────────────────────────────────
 function renderCityFnb() {
+  const df    = getDateFilter();
   const m     = prevMonthKey();
-  const label = prevMonthLabel();
+  const label = df.active
+    ? `${document.getElementById('f-date-from').value || '…'} → ${document.getElementById('f-date-to').value || '…'}`
+    : prevMonthLabel();
   document.getElementById('city-fnb-label').textContent = `F&B Revenue by City — ${label}`;
 
   const cities = ['Brussels','Anvers','Berlin','Frankfurt','Hamburg','Koln','Leipzig'];
   const data   = cities.map(city =>
-    Math.round(ODOO_ROWS.filter(r => isFnB(r) && r.branch === city && r.month === m)
+    Math.round(ODOO_ROWS.filter(r => isFnB(r) && r.branch === city && (df.active ? inDateRange(r.dateObj, df) : r.month === m))
       .reduce((s,r) => s + (r.revenue||0), 0))
   );
 
@@ -1970,11 +1998,13 @@ function renderRecon(venue) {
   if (!container) return;
 
   const succ = r => r.status === 'paid' || r.status === 'succeeded';
-  const venueInv    = INVOICE_ROWS.filter(r => r.venue === venue);
-  const venuePOS    = ODOO_ROWS.filter(r => r.venue === venue);
+  const df = getDateFilter();
+  const dateOk = r => !df.active || inDateRange(r.dateObj, df);
+  const venueInv    = INVOICE_ROWS.filter(r => r.venue === venue && dateOk(r));
+  const venuePOS    = ODOO_ROWS.filter(r => r.venue === venue && dateOk(r));
   const venueStripe = isBelgium
-    ? RAW.filter(r => succ(r) && (r.city === 'Brussels' || r.city === 'Anvers'))
-    : RAW.filter(r => succ(r) && r.city === venue);
+    ? RAW.filter(r => succ(r) && (r.city === 'Brussels' || r.city === 'Anvers') && dateOk(r))
+    : RAW.filter(r => succ(r) && r.city === venue && dateOk(r));
 
   const allMonths = [...new Set([
     ...venueStripe.map(r => r.month),
