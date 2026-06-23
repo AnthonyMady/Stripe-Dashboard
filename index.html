@@ -874,13 +874,19 @@ function parseCSV(content, filename, odooMap, odooLoaded) {
       txWeek = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
     }
 
-    // Determine city using Odoo mapping for Belgium
-    // If pi_id matches Anvers in Odoo → Anvers
-    // Everything else in Belgium file → Brussels (default)
+    // Determine city for Belgium:
+    // 1. Odoo POS odooMap (authoritative for in-store)
+    // 2. Stripe metadata location field (set by booking website for online orders)
+    // 3. Default → Brussels
     let city = fileCity;
     if (isBelgium) {
+      const locationMeta = (obj['location (metadata)'] || '').toLowerCase().trim();
       if (odooLoaded && piId && odooMap[piId] === 'Anvers') {
         city = 'Anvers';
+      } else if (locationMeta === 'antwerp' || locationMeta === 'anvers') {
+        city = 'Anvers';
+      } else if (locationMeta === 'brussels' || locationMeta === 'bruxelles' || locationMeta === 'bxl') {
+        city = 'Brussels';
       } else {
         city = 'Brussels';
       }
