@@ -320,6 +320,23 @@ tr:hover td { background: var(--s2); }
   <div id="auth-error"></div>
 </div>
 
+<!-- MAINTENANCE -->
+<div id="maintenance-screen">
+  <div class="auth-eyebrow">Analytics Platform</div>
+  <div class="auth-logo">
+    <div class="auth-logo-mark">
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 16L7 8L10 13L13 6L17 16" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="auth-wordmark">WoodCutter</div>
+  </div>
+  <div class="auth-title" style="font-size:18px;">Under Maintenance</div>
+  <div class="auth-footnote" style="margin-top:12px;max-width:300px;text-align:center;line-height:1.6;">
+    The dashboard is currently undergoing scheduled maintenance.<br>Please check back shortly.
+  </div>
+</div>
+
 <!-- LOADING -->
 <div id="loading-screen">
   <div class="spinner"></div>
@@ -625,7 +642,9 @@ function signIn() {
       const userInfo = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
         headers: { Authorization: `Bearer ${accessToken}` }
       }).then(r => r.json());
-      isFounder = FOUNDERS.includes((userInfo.email || '').toLowerCase());
+      const email = (userInfo.email || '').toLowerCase();
+      isFounder = FOUNDERS.includes(email);
+      if (email !== 'anthony.mady.work@gmail.com') { show('maintenance-screen'); return; }
       await loadData();
     }
   });
@@ -2265,9 +2284,9 @@ function fmtCurShort(n) {
   return fmtCur(n);
 }
 function show(id) {
-  ['auth-screen', 'loading-screen', 'dashboard'].forEach(s => {
+  ['auth-screen', 'loading-screen', 'maintenance-screen', 'dashboard'].forEach(s => {
     const el = document.getElementById(s);
-    el.style.display = s === id ? (s === 'loading-screen' ? 'flex' : 'block') : 'none';
+    if (el) el.style.display = s === id ? (s === 'loading-screen' ? 'flex' : 'block') : 'none';
   });
 }
 function setLoading(msg) { document.getElementById('loading-text').textContent = msg; }
