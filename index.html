@@ -644,7 +644,7 @@ function signIn() {
       }).then(r => r.json());
       const email = (userInfo.email || '').toLowerCase();
       isFounder = FOUNDERS.includes(email);
-      if (email !== 'anthony.mady.work@gmail.com') { show('maintenance-screen'); return; }
+      if (!FOUNDERS.includes(email)) { show('maintenance-screen'); return; }
       await loadData();
     }
   });
